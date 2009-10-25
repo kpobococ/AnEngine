@@ -8,3 +8,11 @@ framework limit PHP to version 5.2.0 or later. Each class that introduces
 additional limitation will have it marked in both file documentation and class
 documentation. When this class is used, it will throw an exception if any of
 the requirements are not met.
+
+AnEngine is completely object oriented. It is based on several concepts,
+inspired by other languages:
+ - All data inside AnEngine is wrapped into an object by default, allowing
+   complete type-hinting of all data, individual data type methods and, ofcourse,
+   custom data types, based on any of the provided classes
+ - The basic AnEngine object class, the AeObject, implements magic getter and
+   setter functionality, allowing you to never worry about your properties
