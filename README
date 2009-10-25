@@ -1,2 +1,10 @@
-test
-test
+AnEngine is an object oriented PHP framework, designed as a set of tools to
+simplify web site development. The basic concept of the framework is "only use
+what you need". That is why, most classes are designed to not depend on other
+classes in the framework (unless inheritance takes place).
+
+AnEngine is pure PHP 5, however, several functionalities used throughout the
+framework limit PHP to version 5.2.0 or later. Each class that introduces
+additional limitation will have it marked in both file documentation and class
+documentation. When this class is used, it will throw an exception if any of
+the requirements are not met.
