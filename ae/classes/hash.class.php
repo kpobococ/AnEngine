@@ -47,7 +47,7 @@ class AeHash extends AeArray
         }
 
         if (!is_null($value) && !$this->setValue($value)) {
-            throw new AeArrayException('Invalid value passed: expecting null or hash, ' . AeType::typeOf($value) . ' given', 400);
+            throw new AeHashException('Invalid value passed: expecting null or hash, ' . AeType::typeOf($value) . ' given', 400);
         }
     }
 

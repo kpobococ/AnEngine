@@ -69,7 +69,7 @@ class AeTemplate extends AeNode
      * List of escape method callbacks
      * @var array
      */
-    protected $_escapeCallback = array();
+    protected $_escapeCallback = array('htmlspecialchars');
 
     /**
      * Name/path to the template file
@@ -236,7 +236,7 @@ class AeTemplate extends AeNode
     {
         if (func_num_args() > 1) {
             $callbacks = func_get_args();
-			$callbacks = array_splice($callbacks, 1);            
+            $callbacks = array_splice($callbacks, 1);
         } else {
             $callbacks = $this->getEscapeCallback();
         }
@@ -401,8 +401,8 @@ class AeTemplate extends AeNode
         if (is_string($name) && $value !== null)
         {
             // *** Only assign if no conflict
-            if (property_exists($this, $name) || property_exists($this, '_' . $name)) {
-                throw new AeTemplateException('Cannot assign variable — name is reserved', 409);
+            if ($this->propertyExists($name)) {
+                throw new AeTemplateException('Cannot assign variable: name is reserved', 409);
             }
 
             $this->_properties[$name] = $value;
@@ -546,6 +546,51 @@ class AeTemplate extends AeNode
             }
 
             return $this->assign($name, $value);
+        }
+
+        return false;
+    }
+
+    public function assignEscape($name, $value = null)
+    {
+        if ($name instanceof AeArray || $name instanceof AeString) {
+            $name = $name->getValue();
+        }
+
+        // *** Assign from object
+        if (is_object($name))
+        {
+            foreach (get_object_vars($name) as $key => $value) {
+                $this->assignEscape($key, $value);
+            }
+
+            return true;
+        }
+
+        // *** Assign from array
+        if (is_array($name))
+        {
+            foreach ($name as $key => $value) {
+                $this->assignEscape($key, $value);
+            }
+
+            return true;
+        }
+
+        // *** Regular name => value assign
+        if (is_string($name) && $value !== null)
+        {
+            // *** Get possible escape callbacks
+            $args = @func_get_args();
+            $args = array_splice($args, 1);
+
+            // *** Only assign if no conflict
+            if ($this->propertyExists($name)) {
+                throw new AeTemplateException('Cannot assign variable: name is reserved', 409);
+            }
+
+            $this->_properties[$name] = $this->escape($args);
+            return true;
         }
 
         return false;

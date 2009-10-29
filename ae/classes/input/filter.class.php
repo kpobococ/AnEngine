@@ -352,12 +352,12 @@ class AeInput_Filter extends AeObject
     }
 
     /**
-	 * Try to convert to plaintext
-	 *
-	 * @param string $source
+     * Try to convert to plaintext
      *
-	 * @return string Plaintext string
-	 */
+     * @param string $source
+     *
+     * @return string Plaintext string
+     */
     public function decode($source)
     {
         // *** Entity decode

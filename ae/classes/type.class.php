@@ -51,7 +51,7 @@ abstract class AeType extends AeObject
      *
      * @todo check all libs to add support for this parameter
      */
-    public static $wrapReturn = null;
+    public static $wrapReturn = true;
 
     /**
      * Wrap value in AeType instance

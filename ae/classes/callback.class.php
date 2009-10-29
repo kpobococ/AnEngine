@@ -35,6 +35,12 @@ class AeCallback extends AeObject
     protected $_value;
 
     /**
+     * Callback parameters
+     * @var array
+     */
+    protected $_arguments = null;
+
+    /**
      * Callback constructor
      *
      * Possible usages:
@@ -58,10 +64,14 @@ class AeCallback extends AeObject
      * @param object|string|array|null $callback
      * @param string                   $method
      */
-    public function __construct($callback = null, $method = null)
+    public function __construct($callback = null, $method = null, $arguments = null)
     {
         if (!is_null($callback) && !$this->setValue($callback, $method)) {
             throw new AeCallbackException('Invalid callback value passed', 400);
+        }
+
+        if (!is_null($arguments)) {
+            $this->setArguments($arguments);
         }
     }
 
@@ -100,6 +110,11 @@ class AeCallback extends AeObject
         return true;
     }
 
+    public function setArguments($arguments)
+    {
+        $this->_arguments = (array) $arguments;
+    }
+
     /**
      * Call stored callback
      *
@@ -121,11 +136,12 @@ class AeCallback extends AeObject
      *
      * @return mixed callback call result
      */
-    public function call($args, $ma = null)
+    public function call($args = array(), $ma = null)
     {
-        if (AeType::typeOf($args) == 'string') {
-            $name = (string) $args;
+        $type = AeType::typeOf($args);
 
+        // *** Backwards compatibility with AeObject::call()
+        if ($type == 'string' && $this->methodExists($name = (string) $args)) {
             return parent::call($name, $ma);
         }
 
@@ -135,14 +151,14 @@ class AeCallback extends AeObject
             throw new AeCallbackException('No callback value stored', 400);
         }
 
-        $type = AeType::typeOf($args);
-
         if ($type != 'array') {
             throw new AeCallbackException('Invalid args type: expecting array, ' . $type . ' given', 400);
         }
 
         if (count($args) > 0) {
             return call_user_func_array($callback, $args);
+        } else if (count($this->_arguments) > 0) {
+            return call_user_func_array($callback, $this->_arguments);
         }
 
         return call_user_func($callback);

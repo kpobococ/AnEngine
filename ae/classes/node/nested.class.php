@@ -189,7 +189,7 @@ class AeNode_Nested extends AeNode
  * @package AnEngine
  * @todo add subpackage once custom documentor is done //Exception
  */
-class AeNestedNodeException extends AeNodeException
+class AeNodeNestedException extends AeNodeException
 {
     /**
      * @param string $message
