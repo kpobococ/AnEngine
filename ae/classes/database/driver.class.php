@@ -244,8 +244,6 @@ abstract class AeDatabase_Driver extends AeObject implements AeInterface_Databas
      * @throws AeDatabaseDriverException instead of PDOException on underlying
      *                                   driver error
      *
-     * @todo maybe add bind method to support PDO::bindParam() method
-     *
      * @see http://php.net/manual/en/pdo.query.php
      * @see http://php.net/manual/en/pdo.prepare.php
      * @see http://php.net/manual/en/pdostatement.execute.php

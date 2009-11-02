@@ -113,7 +113,7 @@ abstract class AeXml
  * @package AnEngine
  * @todo add subpackage once custom documentor is done //Exception
  */
-class AeXmlException extends AeLibraryException
+class AeXmlException extends AeException
 {
     /**
      * @param string $message

@@ -101,7 +101,7 @@ abstract class AeFile
  * @package AnEngine
  * @todo add subpackage once custom documentor is done //Exception
  */
-class AeFileException extends AeLibraryException
+class AeFileException extends AeException
 {
     /**
      * @param string $message

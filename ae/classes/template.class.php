@@ -589,7 +589,7 @@ class AeTemplate extends AeNode
                 throw new AeTemplateException('Cannot assign variable: name is reserved', 409);
             }
 
-            $this->_properties[$name] = $this->escape($args);
+            $this->_properties[$name] = $this->call('escape', $args);
             return true;
         }
 

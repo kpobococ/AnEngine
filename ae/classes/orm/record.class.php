@@ -35,7 +35,6 @@ abstract class AeOrm_Record extends AeNode
 
     public function set($name, $value)
     {
-        // *** Strip leading underscores
         $name = (string) $name;
 
         if ($this->propertyExists($name, 'set'))

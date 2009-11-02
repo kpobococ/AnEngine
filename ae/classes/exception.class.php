@@ -34,7 +34,7 @@ class AeException extends Exception
      */
     public function __construct($message, $code = 500)
     {
-        $this->_appendPrefix('AnEngine');
+        $this->_appendPrefix('Ae');
         parent::__construct($message, $code);
     }
 

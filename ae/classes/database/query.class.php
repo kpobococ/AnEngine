@@ -12,7 +12,7 @@ class AeDatabase_Query extends AeObject
 
     protected $_database;
     protected $_type = null;
-    protected $_select = array();
+    protected $_select = null;
     protected $_from = null;
     protected $_fields = null;
     protected $_values = null;
@@ -84,7 +84,6 @@ class AeDatabase_Query extends AeObject
 
     public function delete($table)
     {
-        // TODO: add multiple table syntax support
         $this->_type = self::TYPE_DELETE;
 
         return $this->from((string) $table);
@@ -116,9 +115,23 @@ class AeDatabase_Query extends AeObject
         return $this;
     }
 
-    /**
-     * @todo add fields method to set fields for the values
-     */
+    public function fields($fields)
+    {
+        if (!is_array($this->_fields)) {
+            $this->_fields = array();
+        }
+
+        if ($fields instanceof AeArray) {
+            $fields = $fields->getValue();
+        }
+
+        foreach ($fields as $field) {
+            $this->_fields[] = $this->field($field);
+        }
+
+        return $this;
+    }
+
     public function values($value)
     {
         $args = func_get_args();
@@ -133,11 +146,8 @@ class AeDatabase_Query extends AeObject
                 $value = $value->getValue();
             }
 
-            if (!is_array($this->_fields))
-            {
-                foreach (array_keys($value) as $field) {
-                    $this->_fields[] = $this->field($field);
-                }
+            if (!is_array($this->_fields)) {
+                $this->fields(array_keys($value));
             }
 
             $val = array();
@@ -154,11 +164,11 @@ class AeDatabase_Query extends AeObject
 
     public function from($table, $alias = null)
     {
-        if ($table instanceof AeScalar || $table instanceof AeArray) {
+        if ($table instanceof AeType) {
             $table = $table->getValue();
         }
 
-        if ($alias instanceof AeScalar || $alias instanceof AeArray) {
+        if ($alias instanceof AeType) {
             $alias = $alias->getValue();
         }
 
@@ -291,19 +301,24 @@ class AeDatabase_Query extends AeObject
         return $this;
     }
 
+    public function getHaving()
+    {
+        if ($this->_having === null) {
+            $this->_having = $this->clause();
+        }
+
+        return $this->_having;
+    }
+
     public function having()
     {
         $args = func_get_args();
 
-        if ($this->_having === null) {
-            $this->_having = $this->clause($this);
-        }
-
         if (count($args) > 0) {
-            $this->_having->call('add', $args);
+            $this->having->call('add', $args);
         }
 
-        return $this->_having;
+        return $this->having;
     }
 
     public function order($field, $sort = 'ASC')
@@ -530,8 +545,7 @@ class AeDatabase_Query extends AeObject
     {
         $field = trim($field);
 
-        if ($supportFunctions === true && strpos($field, '(') && preg_match('#^[-_a-z0-9]+\(.*\)$#i', $field))
-        {
+        if ($supportFunctions === true && strpos($field, '(') && preg_match('#^[-_a-z0-9]+\(.*\)$#i', $field)) {
             // *** Looks like a function
             return $field;
         }
@@ -552,7 +566,7 @@ class AeDatabase_Query extends AeObject
             $field = '`' . $field . '`';
         }
 
-        return $alias.$field;
+        return $alias . $field;
     }
 
     public function alias($alias)

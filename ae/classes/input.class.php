@@ -13,8 +13,7 @@
 /**
  * Input class
  *
- * @todo add getText method with tag filtering
- * @todo add getArray method with callback support
+ *
  *
  * @author Anton Suprun <kpobococ@gmail.com>
  * @version 1.0
@@ -24,22 +23,35 @@
 class AeInput extends AeNode_Nested
 {
     /**
-     * Use REQUEST container
+     * Use REQUEST container as source
      */
     const REQUEST = 1;
 
     /**
-     * Use POST container
+     * Use POST container as source
      */
     const POST = 2;
 
     /**
-     * Use GET container
+     * Use GET container as source
      */
     const GET = 3;
 
+    /**
+     * Currently used container
+     * @var int
+     */
     protected $_source = self::REQUEST;
 
+    /**
+     * Constructor
+     *
+     * @see AeInput::setSource()
+     *
+     * @throws AeInputException #400 if source value is invalid
+     *
+     * @param int $source one of source constants
+     */
     public function __construct($source = null)
     {
         if (!is_null($source) && !$this->setSource($source)) {
@@ -47,6 +59,17 @@ class AeInput extends AeNode_Nested
         }
     }
 
+    /**
+     * Set source
+     *
+     * @see AeInput::GET, AeInput::POST, AeInput::REQUEST
+     *
+     * @throws AeInputException #400 if an integer is out of supported bounds
+     *
+     * @param int $source one of source constants
+     *
+     * @return bool true on success, false otherwise
+     */
     public function setSource($source)
     {
         if ($source instanceof AeType) {
@@ -61,11 +84,48 @@ class AeInput extends AeNode_Nested
             throw new AeInputException('Invalid source value: source not supported', 400);
         }
 
+        if ($source == self::REQUEST) {
+            // *** Request array is empty unless accessed
+            isset($_REQUEST);
+        }
+
         $this->_source = $source;
 
         return true;
     }
 
+    /**
+     * Get parameter
+     *
+     * Returns the <var>$name</var> parameter from the selected source. Returns
+     * <var>$default</var> if <var>$name</var> parameter is not set:
+     * <code> // *** Assuming $_GET = array('foo' => 'foo', 'baz' => array('bar' => 'bar'));
+     * $input = new AeInput(AeInput::GET);
+     * $input->get('foo', 'undefined'); // foo
+     * $input->get('bar', 'undefined'); // undefined
+     * $input->get('baz.bar', 'undefined'); // bar</code>
+     *
+     * This method does not return the default value, if the requested parameter
+     * is set but empty, you should use {@link AeInput::getString() getString()}
+     * method for this purpose.
+     *
+     * <b>NOTE:</b> This method is backwards compatible with AeNode_Nested::get(),
+     * which may result in undesired return values. Use other getter methods to
+     * overcome this effect:
+     * <code> $input = new AeInput(AeInput::GET);
+     * $_GET['source'] = 'foo';
+     * $input->get('source'); // AeInput::GET value
+     * $input->getString('source'); // foo</code>
+     *
+     * @see AeInput::getBoolean(), AeInput::getInteger(), AeInput::getFloat(),
+     *      AeInput::getString(), AeInput::getText(), AeInput::getArray(),
+     *      AeInput::GetHtml()
+     *
+     * @param string $name
+     * @param mixed $default
+     * 
+     * @return AeType|mixed
+     */
     public function get($name, $default = null)
     {
         $name = (string) $name;
@@ -74,15 +134,17 @@ class AeInput extends AeNode_Nested
             return parent::get($name, $default);
         }
 
-        return AeType::wrapReturn($this->_getByKey($name, $GLOBALS[$this->_getSourceName()]), $default);
+        return AeType::wrapReturn($this->_getClean($name), $default);
     }
 
     public function getBoolean($name, $default = false)
     {
-        $value = $this->_getByKey($name, $GLOBALS[$this->_getSourceName()]);
+        $value = $this->_getClean($name);
 
         if ($value == 'false') {
             $value = false;
+        } else if ($value == 'true') {
+            $value = true;
         }
 
         if ($value !== null) {
@@ -94,7 +156,7 @@ class AeInput extends AeNode_Nested
 
     public function getInteger($name, $default = 0)
     {
-        $value = $this->_getByKey($name, $GLOBALS[$this->_getSourceName()]);
+        $value = $this->_getClean($name);
 
         if (is_numeric($value) && (int) $value == (float) $value) {
             $value = (int) $value;
@@ -107,7 +169,7 @@ class AeInput extends AeNode_Nested
 
     public function getFloat($name, $default = 0.0)
     {
-        $value = $this->_getByKey($name, $GLOBALS[$this->_getSourceName()]);
+        $value = $this->_getClean($name);
 
         if (is_numeric($value)) {
             $value = (float) $value;
@@ -118,18 +180,102 @@ class AeInput extends AeNode_Nested
         return AeType::wrapReturn($value, $default);
     }
 
-    public function getString($name, $default = null)
+    public function getString($name, $default = '')
     {
-        $value = $this->_getByKey($name, $GLOBALS[$this->_getSourceName()]);
+        $value = $this->_getClean($name);
 
-        if (!is_empty($value)) {
+        if (!empty($value))
+        {
             $value = $this->_decodeString($value);
-            $value = preg_replace('#[\s]+#', ' ', $value);
-
+            $value = preg_replace('#\s+#', ' ', $value);
             $value = trim($value);
+        } else {
+            $value = null;
         }
 
-        return AeType::wrapReturn((string) $value);
+        return AeType::wrapReturn($value, $default);
+    }
+
+    public function getText($name, $default = '')
+    {
+        $value = $this->_getClean($name);
+
+        if (!empty($value))
+        {
+            $value = $this->_decodeString($value);
+            $value = str_replace(array("\r\n", "\r"), "\n", $value);
+
+            $lines = explode("\n", $value);
+
+            foreach ($lines as $i => $line) {
+                $lines[$i] = preg_replace('#\s+#', ' ', trim($line));
+            }
+
+            $value = implode("\n", $value);
+        } else {
+            $value = null;
+        }
+
+        return AeType::wrapReturn($value, $default);
+    }
+
+    public function getHtml($name, $default = '')
+    {
+        $value = $this->_getClean($name);
+
+        if (!empty($value))
+        {
+            $value = $this->_decodeString($value);
+            $value = str_replace(array("\r\n", "\r"), "\n", $value);
+            $lines = explode("\n", $value);
+
+            foreach ($lines as $i => $line) {
+                $lines[$i] = preg_replace('#\s+#', ' ', trim($line));
+            }
+
+            $value = implode("\n", $value);
+        } else {
+            $value = null;
+        }
+
+        return new AeInput_Html($value, $default);
+    }
+
+    public function getArray($name, $default = array(), $callback = null)
+    {
+        $value = $this->_getClean($name);
+
+        if (is_array($value))
+        {
+            if (!empty($callback))
+            {
+                if (AeType::typeOf($callback) != 'string') {
+                    throw new AeInputException('Invalid callback value: expecting string, ' . AeType::typeOf($callback) . ' given', 400);
+                }
+
+                $callback = (string) $callback;
+                $method   = 'get' . ucfirst($callback);
+
+                if (!$this->methodExists($method)) {
+                    throw new AeInputException('Invalid callback value: method not supported', 404);
+                }
+
+                foreach ($value as $k => $v)
+                {
+                    $key = $name . '.' . $k;
+
+                    if (is_array($v)) {
+                        $value[$k] = $this->getArray($key, $v, $callback);
+                    } else {
+                        $value[$k] = $this->call($method, array($key, $v));
+                    }
+                }
+            }
+        } else {
+            $value = null;
+        }
+
+        return AeType::wrapReturn($value, $default);
     }
 
     public function set($name, $value)
@@ -187,12 +333,17 @@ class AeInput extends AeNode_Nested
         return '_REQUEST';
     }
 
+    protected function _getClean($name)
+    {
+        return $this->_clean($this->_getByKey($name, $GLOBALS[$this->_getSourceName()]));
+    }
+
     /**
-     * Tidy recursively
+     * Clean recursively
      *
-     * Returns a tidied value, with its slashes stripped (strips recursively, if
-     * value is an array), and null-bytes removed. All operations are commited
-     * on both keys and values for arrays.
+     * Returns a cleaned value, with its slashes stripped (strips recursively,
+     * if value is an array), and null-bytes removed. All operations are
+     * commited on both keys and values for arrays.
      *
      * Stripslashes is only performed, if magic quotes are enabled.
      *
@@ -200,7 +351,7 @@ class AeInput extends AeNode_Nested
      *
      * @return string|array
      */
-    protected function _tidy($value)
+    protected function _clean($value)
     {
         static $magicQuotes = null;
 
@@ -213,7 +364,7 @@ class AeInput extends AeNode_Nested
             $result = array();
 
             foreach ($value as $k => $v) {
-                $result[$this->_tidy($k)] = $this->_tidy($v);
+                $result[$this->_clean($k)] = $this->_clean($v);
             }
 
             $value = $result;

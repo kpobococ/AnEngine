@@ -536,7 +536,7 @@ class AeImage extends AeObject
  * @package AnEngine
  * @todo add subpackage once custom documentor is done //Exception
  */
-class AeImageException extends AeLibraryException
+class AeImageException extends AeException
 {
     /**
      * @param string $message

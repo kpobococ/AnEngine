@@ -19,10 +19,10 @@
  * be faster than AdoDB etc.
  *
  * You can use any of the following methods to get a database wrapper object:
- * <code> $db = AeLibrary::getInstance('database', 'mysql');
+ * <code> $db = AeDatabase::getInstance('mysql');
  *
  * // *** Most configuration options set explicitly
- * $db = AeLibrary::getInstance('database', 'mysql', 'username', 'password', array(
+ * $db = AeDatabase::getInstance('mysql', 'username', 'password', array(
  *     'host'       => 'localhost',
  *     'dbname'     => 'my_database',
  *     'persistent' => true,
@@ -225,7 +225,7 @@ abstract class AeDatabase
  * @package AnEngine
  * @todo add subpackage once custom documentor is done //Exception
  */
-class AeDatabaseException extends AeLibraryException
+class AeDatabaseException extends AeException
 {
     /**
      * @param string $message

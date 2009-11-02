@@ -625,7 +625,7 @@ class AeSession extends AeNode_Nested
  * @package AnEngine
  * @todo add subpackage once custom documentor is done //Exception
  */
-class AeSessionException extends AeLibraryException
+class AeSessionException extends AeException
 {
     /**
      * @param string $message
