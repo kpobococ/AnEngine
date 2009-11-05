@@ -106,12 +106,15 @@ class AeString extends AeScalar implements ArrayAccess
     public function __construct($value = null)
     {
         if (!is_null($value) && !$this->setValue($value)) {
-            throw new AeStringException('Invalid value passed: expecting null or string, ' . AeType::typeOf($value) . ' given', 400);
+            throw new AeStringException('Invalid value passed: expecting null or string, ' . AeType::of($value) . ' given', 400);
         }
     }
 
     /**
      * Set a string value
+     *
+     * @todo return self
+     * @todo throw an exception on invalid value
      *
      * @param string $value
      *

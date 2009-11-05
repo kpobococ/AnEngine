@@ -66,9 +66,9 @@ class AeEvent_Listener extends AeCallback
      *
      * @return bool|mixed
      */
-    public function call($args, $ma = null)
+    public function call($args, $ma = array())
     {
-        if (AeType::typeOf($args) == 'string') {
+        if (AeType::of($args) == 'string') {
             return parent::call($args, $ma);
         }
 

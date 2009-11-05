@@ -73,6 +73,9 @@ class AeInteger extends AeNumeric
      * will be converted to integer. If the value is out of the integer bounds,
      * false is returned
      *
+     * @todo return self
+     * @todo throw an exception on invalid value
+     *
      * @uses AeInteger::MIN
      * @uses AeInteger::MAX
      *

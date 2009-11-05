@@ -36,7 +36,7 @@ abstract class AeNumeric extends AeScalar
      *
      * This method selects the respective class and wraps the passed value using
      * that class. If the value passed is not a numeric value, false is
-     * returned. Numeric value are integer, float and numeric string values.
+     * returned. Numeric values are integer, float and numeric string values.
      *
      * @param mixed $value
      *
@@ -75,7 +75,7 @@ abstract class AeNumeric extends AeScalar
             }
         }
 
-        throw new AeNumericException('Invalid value type: expecting numeric, ' . AeType::typeOf($value) . ' given', 400);
+        throw new AeNumericException('Invalid value type: expecting numeric, ' . AeType::of($value) . ' given', 400);
     }
 }
 

@@ -38,7 +38,7 @@ class AeNull extends AeType
      */
     public function setValue($value)
     {
-        return is_null($value);
+        return $this;
     }
 
     /**

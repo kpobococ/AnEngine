@@ -36,8 +36,14 @@
  * @package AnEngine
  * @todo add subpackage once custom documentor is done //Framework
  */
-class AeObject
+abstract class AeObject
 {
+    /**
+     * Object event handlers
+     * @todo consider moving to private area, since only AeObject methods use
+     *       this directly (except AeEvent::copy())
+     * @var array
+     */
     protected $___events;
 
     /**
@@ -140,10 +146,12 @@ class AeObject
      * $t->baz  = 'baz'; // baz property value set via set('baz', 'baz')
      * $t->_baz = 'baz'; // same as $t->baz = 'baz'</code>
      *
+     * @todo consider adding exception, if property does not exist
+     *
      * @param string $name  name of the property (public or protected)
      * @param mixed  $value new value of the property
      *
-     * @return bool true if property was found and set, false otherwise
+     * @return AeObject self
      */
     public function set($name, $value)
     {
@@ -158,17 +166,17 @@ class AeObject
         // *** Check if property exists
         if ($this->_propertyExists($name)) {
             $this->$name = $value;
-            return true;
+            return $this;
         }
 
         // *** Check if _property exists
         if ($this->_propertyExists('_' . $name)) {
             $_name        = '_' . $name;
             $this->$_name = $value;
-            return true;
+            //return $this;
         }
 
-        return false;
+        return $this;
     }
 
     /**
@@ -189,27 +197,55 @@ class AeObject
      *
      * @param string $name  name of the property (public or protected)
      *
-     * @return bool true if property was found and unset, false otherwise
+     * @return AeObject self
      */
     public function clear($name)
     {
         $value = null;
 
         if ($this->propertyExists($name, 'set')) {
-            $value = $this->get($name);
             $this->set($name, null);
         }
 
-        return $value;
+        return $this;
     }
 
     /**
      * Check if property exists
      *
-     * Returns true, if property exists and can be used with getters and setters,
-     * false otherwise
+     * Checks if an object has property or a getter/setter for that property.
+     * An optional <var>$mode</var> parameter can be used to specify if you
+     * want to check for a property getter or a property setter:
+     * <code> class Test extends AeObject
+     * {
+     *     protected $_foo;
+     *     private $_baz;
+     *
+     *     public function getBar()
+     *     {
+     *         return 'bar';
+     *     }
+     *
+     *     public function setBaz($value)
+     *     {
+     *         $this->_baz = $value;
+     *     }
+     * }
+     *
+     * $test = new Test;
+     *
+     * $test->propertyExists('foo'); // true
+     * $test->propertyExists('bar'); // true
+     * $test->propertyExists('baz'); // false
+     *
+     * $test->propertyExists('foo', 'set'); // true
+     * $test->propertyExists('bar', 'set'); // false
+     * $test->propertyExists('baz', 'set'); // true</code>
+     *
+     * @see AeObject::methodExists()
      *
      * @param string $name property name
+     * @param string $mode property mode. Default: get
      *
      * @return bool
      */
@@ -240,8 +276,20 @@ class AeObject
     /**
      * Check if method exists
      *
-     * Returns true, if method exists and can be called. This method also
-     * returns true for all virtual getters and setters
+     * Checks if an object has a method, either defined or virtual. This is
+     * particularly useful when working with virtual getters and setters:
+     * <code> class Test extends AeObject
+     * {
+     *     protected $_foo;
+     * }
+     *
+     * $test = new Test;
+     * 
+     * $test->methodExists('getFoo'); // true
+     * $test->methodExists('setFoo'); // true
+     * </code>
+     *
+     * @see AeObject::propertyExists()
      *
      * @param string $name method name
      *
@@ -448,19 +496,45 @@ class AeObject
         $this->clear($name);
     }
 
+    /**
+     * Check if property exists
+     *
+     * Checks if an actual property exists
+     *
+     * @param string $name property name
+     *
+     * @return bool
+     */
     protected function _propertyExists($name)
     {
         return property_exists($this, $name);
     }
 
+    /**
+     * Check if method exists
+     *
+     * Checks if an actual method exists
+     *
+     * @param string $name method name
+     *
+     * @return bool
+     */
     protected function _methodExists($name)
     {
         return method_exists($this, $name);
     }
 
+    /**
+     * Add event listener
+     *
+     * @param string     $name     event name
+     * @param AeCallback $listener event handling function
+     *
+     * @return AeEvent_Listener
+     */
     public function addEvent($name, $listener)
     {
-        $type = AeType::typeOf($name);
+        $type = AeType::of($name);
 
         if ($type != 'string') {
             throw new AeObjectException('Invalid name type: expecting string, ' . $type . ' given', 400);
@@ -469,9 +543,17 @@ class AeObject
         return AeEvent::add($name, $listener, $this);
     }
 
+    /**
+     * Remove event listener
+     *
+     * @param string           $name
+     * @param AeEvent_Listener $listener
+     *
+     * @return AeEvent_Listener
+     */
     public function removeEvent($name, AeEvent_Listener $listener)
     {
-        $type = AeType::typeOf($name);
+        $type = AeType::of($name);
 
         if ($type != 'string') {
             throw new AeObjectException('Invalid name type: expecting string, ' . $type . ' given', 400);
@@ -480,9 +562,22 @@ class AeObject
         return AeEvent::remove($name, $listener, $this);
     }
 
+    /**
+     * Add multiple event listeners
+     *
+     * Allows to add several event listeners to different events:
+     * <code> $listeners = $myObj->addEvents(array(
+     *     'foo' => new AeCallback('Handler, 'onFoo'),
+     *     'bar' => new AeCallback('Handler, 'onBar')
+     * ));</code>
+     *
+     * @param array $events
+     *
+     * @return array an array of event AeEvent_Listener objects
+     */
     public function addEvents($events)
     {
-        $type = AeType::typeOf($name);
+        $type = AeType::of($name);
 
         if ($type != 'array') {
             throw new AeObjectException('Invalid events type: expecting array, ' . $type . ' given', 400);
@@ -491,9 +586,25 @@ class AeObject
         return AeEvent::add($events, null, $this);
     }
 
+    /**
+     * Remove several event listeners
+     *
+     * Allows to remove several event listeners from different events:
+     * <code> $myObj->removeEvents(array(
+     *     'foo' => $listeners['foo'],
+     *     'bar' => $listeners['bar']
+     * ));</code>
+     *
+     * You can also remove all event listeners for a certain event:
+     * <code> $myObj->removeEvents('foo');</code>
+     *
+     * @param array|string $events
+     *
+     * @return array an array of removed AeEvent_Listener objects
+     */
     public function removeEvents($events)
     {
-        $type = AeType::typeOf($name);
+        $type = AeType::of($name);
 
         if ($type == 'string')
         {
@@ -515,11 +626,70 @@ class AeObject
         return AeEvent::remove($events, null, $this);
     }
 
+    /**
+     * Fire event
+     *
+     * Triggers an event, identified by <var>$name</var>, using <var>$args</var>
+     * as additional event parameters:
+     * <code> $myObj->fireEvent('foo', array('foo', 'bar', 'baz'));</code>
+     *
+     * An event handler for such fireEvent call might look something like this:
+     * <code> function onFoo($event, $foo, $bar, $baz)
+     * {
+     *     var_dump($foo, $bar, $baz);
+     * }</code>
+     *
+     * This method returns false, if an event listener requested to stop the
+     * default event action (see {@link AeEvent::preventDefault()}), true
+     * otherwise. Note, that not all classes support the preventDefault action.
+     *
+     * @param string $name event name
+     * @param array  $args event parameters
+     *
+     * @return bool
+     */
     public function fireEvent($name, $args = null)
     {
         return AeEvent::fire($name, $args, $this);
     }
 
+    /**
+     * Clone events
+     *
+     * Copies all event from <var>$from</var> object to the current one. If an
+     * optional <var>$name</var> parameter is specified and is a string, only
+     * event listeners for that event are copied.
+     *
+     * Note that AeEvent_Listener objects are not actually cloned, but are set
+     * directly to several objects, so modifying a listener will affect all
+     * objects, to which it was assigned.
+     *
+     * This method returns different array structures depending on the value of
+     * <var>$name</var> parameter:
+     * <code> print_r($myObj->cloneEvents($myOtherObj));
+     * print_r($myObj->cloneEvents($myOtherObj, 'foo'));</code>
+     *
+     * The code above will result in something like this:
+     * <pre> Array(
+     *     'foo' => Array(
+     *         0 => AeEvent_Listener,
+     *         1 => AeEvent_Listener
+     *     ),
+     *     'bar' => Array(
+     *         0 => AeEvent_Listener
+     *     )
+     * )
+     *
+     * Array(
+     *     0 => AeEvent_Listener,
+     *     1 => AeEvent_Listener
+     * )</pre>
+     *
+     * @param AeObject $from
+     * @param string   $name
+     *
+     * @return array an array of all the event listeners
+     */
     public function cloneEvents(AeObject $from, $name = null)
     {
         return AeEvent::copy($from, $this, $name);

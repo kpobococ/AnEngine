@@ -551,7 +551,7 @@ class AeXml_Node extends AeNode
 
     public function setProperties($properties)
     {
-        $type = AeType::typeOf($properties);
+        $type = AeType::of($properties);
 
         if ($type != 'array') {
             throw new AeXmlNodeException('Invalid properties type: expecting array, ' . $type . ' given', 400);

@@ -24,6 +24,9 @@ if (!version_compare(PHP_VERSION, '5.2.0', '>=')) {
  *
  * @requires PHP 5.2.0
  *
+ * @todo consider removing static functionality in favor of AeObject event
+ *       handling methods
+ *
  * @author Anton Suprun <kpobococ@gmail.com>
  * @version 1.0
  * @package AnEngine
@@ -150,7 +153,7 @@ class AeEvent extends AeObject
      */
     public static function add($name, $listener, AeObject $target = null)
     {
-        $type = AeType::typeOf($name);
+        $type = AeType::of($name);
 
         if ($type == 'array')
         {
@@ -200,7 +203,7 @@ class AeEvent extends AeObject
      */
     public static function remove($name, $listener, AeObject $target = null)
     {
-        $type = AeType::typeOf($name);
+        $type = AeType::of($name);
 
         if ($type == 'array')
         {
@@ -228,7 +231,7 @@ class AeEvent extends AeObject
 
             return $events;
         } else if (!($listener instanceof AeEvent_Listener)) {
-            throw new AeEventException('Invalid listener type: expecting instance of AeEvent_Listener, ' . AeType::typeOf($listener) . ' given', 400);
+            throw new AeEventException('Invalid listener type: expecting instance of AeEvent_Listener, ' . AeType::of($listener) . ' given', 400);
         }
 
         $hash = spl_object_hash($listener);
@@ -284,7 +287,7 @@ class AeEvent extends AeObject
      */
     public static function fire($name, $args = null, AeObject $target = null)
     {
-        $type = AeType::typeOf($name);
+        $type = AeType::of($name);
 
         if ($type != 'string') {
             throw new AeEventException('Invalid name type: expecting string, ' . $type . ' given', 400);

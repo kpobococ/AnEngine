@@ -51,7 +51,7 @@ abstract class AeOrm_Model extends AeObject
 
     public function loadRecord($id, $foreign = null)
     {
-        $type = AeType::typeOf($foreign);
+        $type = AeType::of($foreign);
 
         if ($type == 'boolean') {
             $foreign = $foreign instanceof AeType ? $foreign->getValue() : $foreign;
@@ -83,7 +83,7 @@ abstract class AeOrm_Model extends AeObject
 
         $row = $query->execute(1)->getRow();
 
-        if (AeType::typeOf($row) == null) {
+        if (AeType::of($row) == null) {
             throw new AeOrmModelException('Record not found', 404);
         }
 

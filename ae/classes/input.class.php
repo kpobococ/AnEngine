@@ -55,7 +55,7 @@ class AeInput extends AeNode_Nested
     public function __construct($source = null)
     {
         if (!is_null($source) && !$this->setSource($source)) {
-            throw new AeInputException('Invalid source value: expecting null or integer, ' . AeType::typeOf($source) . ' given', 400);
+            throw new AeInputException('Invalid source value: expecting null or integer, ' . AeType::of($source) . ' given', 400);
         }
     }
 
@@ -249,8 +249,8 @@ class AeInput extends AeNode_Nested
         {
             if (!empty($callback))
             {
-                if (AeType::typeOf($callback) != 'string') {
-                    throw new AeInputException('Invalid callback value: expecting string, ' . AeType::typeOf($callback) . ' given', 400);
+                if (AeType::of($callback) != 'string') {
+                    throw new AeInputException('Invalid callback value: expecting string, ' . AeType::of($callback) . ' given', 400);
                 }
 
                 $callback = (string) $callback;

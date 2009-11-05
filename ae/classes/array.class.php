@@ -160,7 +160,7 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
         }
 
         if (!is_null($value) && !$this->setValue($value)) {
-            throw new AeArrayException('Invalid value passed: expecting null or array, ' . AeType::typeOf($value) . ' given', 400);
+            throw new AeArrayException('Invalid value passed: expecting null or array, ' . AeType::of($value) . ' given', 400);
         }
     }
 

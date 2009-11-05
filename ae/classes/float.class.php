@@ -48,6 +48,9 @@ class AeFloat extends AeNumeric
     /**
      * Set a float value
      *
+     * @todo return self
+     * @todo throw an exception on invalid value
+     *
      * @param float $value
      *
      * @return bool true on valid value, false otherwise.

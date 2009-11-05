@@ -236,7 +236,7 @@ class AeSettings_Driver_Xml extends AeSettings_Driver
 
             $setting->setData($value);
         } else {
-            $type    = AeType::typeOf($value);
+            $type    = AeType::of($value);
             $setting = $node->addChild('scalar');
 
             $setting->properties = array('name' => $name, 'type' => $type);

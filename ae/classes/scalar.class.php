@@ -62,7 +62,7 @@ abstract class AeScalar extends AeType
 
         if (is_scalar($value))
         {
-            switch (AeType::typeOf($value))
+            switch (AeType::of($value))
             {
                 case 'boolean': {
                     return new AeBoolean($value);
@@ -82,15 +82,17 @@ abstract class AeScalar extends AeType
             }
         }
 
-        throw new AeScalarException('Invalid value type: expecting scalar, ' . AeType::typeOf($value) . ' given', 400);
+        throw new AeScalarException('Invalid value type: expecting scalar, ' . AeType::of($value) . ' given', 400);
     }
 
     /**
      * Set a value
      *
+     * @todo return self
+     *
      * @param mixed $value
      *
-     * @return bool true on valid value, false otherwise.
+     * @return bool
      */
     abstract public function setValue($value);
 

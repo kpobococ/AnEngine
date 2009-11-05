@@ -50,6 +50,9 @@ class AeBoolean extends AeScalar
      *
      * @param bool $value
      *
+     * @todo return self
+     * @todo throw an exception on invalid value
+     *
      * @return bool true on valid value, false otherwise.
      */
     public function setValue($value)

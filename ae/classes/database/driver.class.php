@@ -370,7 +370,7 @@ abstract class AeDatabase_Driver extends AeObject implements AeInterface_Databas
      * // some code here</code>
      *
      * You can use the following code as a workaround:
-     * <code> while (AeType::typeOf($field = $database->getField()) != 'null') {
+     * <code> while (AeType::of($field = $database->getField()) != 'null') {
      * // some code here</code>
      *
      * @return AeString
@@ -531,14 +531,14 @@ abstract class AeDatabase_Driver extends AeObject implements AeInterface_Databas
         {
             $key = (string) $key;
 
-            while (AeType::typeOf($row = $this->getRow()) != 'null')
+            while (AeType::of($row = $this->getRow()) != 'null')
             {
                 if (isset($row->$key)) {
                     $return[$row[$key]] = array_shift($row);
                 }
             }
         } else {
-            while (AeType::typeOf($row = $this->getField()) != 'null') {
+            while (AeType::of($row = $this->getField()) != 'null') {
                 $return[] = $row;
             }
         }
@@ -591,7 +591,7 @@ abstract class AeDatabase_Driver extends AeObject implements AeInterface_Databas
 
         $return = array();
 
-        while (AeType::typeOf($row = $this->getObject((string) $class, (array) $args)) != 'null')
+        while (AeType::of($row = $this->getObject((string) $class, (array) $args)) != 'null')
         {
             if (!is_null($key) && isset($row->$key)) {
                 $return[$row->$key] = $row;
@@ -636,7 +636,7 @@ abstract class AeDatabase_Driver extends AeObject implements AeInterface_Databas
 
         $return = array();
 
-        while (AeType::typeOf($row = $this->getRow()) != 'null')
+        while (AeType::of($row = $this->getRow()) != 'null')
         {
             if (!is_null($key) && isset($row[$key])) {
                 $return[(string) $row[$key]] = $row;

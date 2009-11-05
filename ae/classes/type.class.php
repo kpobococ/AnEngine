@@ -16,7 +16,7 @@
  * This type is the framework's basic data type. It has several useful methods
  * and properties, that are used throughout the whole framework
  *
- * @method mixed getValue() getValue($default = null) Get a scalar value
+ * @todo consider adding an unwrap() static method
  *
  * @author Anton Suprun <kpobococ@gmail.com>
  * @version 1.0
@@ -86,7 +86,7 @@ abstract class AeType extends AeObject
     }
 
     /**
-     * Get value type
+     * Get type of value
      *
      * This method returns data type of the value passed. This method will
      * return class name for any of the {@link AeType} classes. The purpose of
@@ -109,7 +109,7 @@ abstract class AeType extends AeObject
      *
      * @return string
      */
-    public static function typeOf($value)
+    public static function of($value)
     {
         if (is_null($value)) {
             return 'null';
@@ -122,7 +122,7 @@ abstract class AeType extends AeObject
         if (is_object($value))
         {
             if ($value instanceof AeType) {
-                return self::typeOf($value->getValue());
+                return self::of($value->getValue());
             }
 
             return 'object';

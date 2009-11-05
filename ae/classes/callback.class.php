@@ -136,9 +136,9 @@ class AeCallback extends AeObject
      *
      * @return mixed callback call result
      */
-    public function call($args = array(), $ma = null)
+    public function call($args = array(), $ma = array())
     {
-        $type = AeType::typeOf($args);
+        $type = AeType::of($args);
 
         // *** Backwards compatibility with AeObject::call()
         if ($type == 'string' && $this->methodExists($name = (string) $args)) {
