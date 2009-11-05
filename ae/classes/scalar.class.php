@@ -92,7 +92,7 @@ abstract class AeScalar extends AeType
      *
      * @param mixed $value
      *
-     * @return bool
+     * @return AeScalar self
      */
     abstract public function setValue($value);
 

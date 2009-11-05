@@ -99,26 +99,25 @@ class AeString extends AeScalar implements ArrayAccess
     /**
      * String constructor
      *
-     * @throws AeStringException #400 if the value passed is not a string
+     * @see AeString::setValue()
      *
      * @param string $value
      */
     public function __construct($value = null)
     {
-        if (!is_null($value) && !$this->setValue($value)) {
-            throw new AeStringException('Invalid value passed: expecting null or string, ' . AeType::of($value) . ' given', 400);
+        if (!is_null($value)) {
+            $this->setValue($value);
         }
     }
 
     /**
      * Set a string value
      *
-     * @todo return self
-     * @todo throw an exception on invalid value
+     * @throws AeStringException #400 on invalid value
      *
      * @param string $value
      *
-     * @return bool true on valid value, false otherwise.
+     * @return AeString self
      */
     public function setValue($value)
     {
@@ -129,12 +128,12 @@ class AeString extends AeScalar implements ArrayAccess
         }
 
         if (!is_string($value)) {
-            return false;
+            throw new AeStringException('Invalid value passed: expecting string, ' . AeType::of($value) . ' given', 400);
         }
 
         $this->_value = $value;
 
-        return true;
+        return $this;
     }
 
     /**
@@ -145,8 +144,8 @@ class AeString extends AeScalar implements ArrayAccess
      *
      * @see iconv_strlen(), iconv_substr()
      *
-     * @param int|AeInteger   $index   index
-     * @param string|AeString $default default value
+     * @param int    $index   index
+     * @param string $default default value
      *
      * @return AeString
      */
@@ -166,9 +165,8 @@ class AeString extends AeScalar implements ArrayAccess
             }
         }
 
-        if (!is_null($this->getValue()) && $this->length() >= $index + 1) {
-            $string = $this->getValue();
-            return new AeString(iconv_substr($string, $index, 1, 'UTF-8'));
+        if (!is_null($this->_value) && $this->length() >= $index + 1) {
+            return new AeString(iconv_substr($this->_value, $index, 1, 'UTF-8'));
         }
 
         return new AeString($default);
@@ -181,6 +179,8 @@ class AeString extends AeScalar implements ArrayAccess
      *  - {@link AeString::TRIM_LEFT}  - strip from the beginning
      *  - {@link AeString::TRIM_RIGHT} - strip from the end
      *  - {@link AeString::TRIM_BOTH}  - (default) strip from both beginning and end
+     *
+     * @throws AeStringException #400 on invalid mode
      *
      * @see trim(), ltrim(), rtrim()
      *
@@ -197,18 +197,20 @@ class AeString extends AeScalar implements ArrayAccess
         switch ($mode)
         {
             case AeString::TRIM_LEFT: {
-                return new AeString(ltrim($this->getValue()));
+                return new AeString(ltrim($this->_value));
             } break;
 
             case AeString::TRIM_RIGHT: {
-                return new AeString(rtrim($this->getValue()));
+                return new AeString(rtrim($this->_value));
             } break;
 
             case AeString::TRIM_BOTH:
             default: {
-                return new AeString(trim($this->getValue()));
+                return new AeString(trim($this->_value));
             } break;
         }
+
+        throw new AeStringException('Invalid mode value: expecting one of AeString::TRIM constants', 400);
     }
 
     /**
@@ -219,15 +221,18 @@ class AeString extends AeScalar implements ArrayAccess
      *  - {@link AeString::PAD_RIGHT} - (default) pad on the end
      *  - {@link AeString::PAD_BOTH}  - pad on both beginning and end
      *
+     * @throws AeStringException #400 on invalid length value
+     * @throws AeStringException #400 on invalid mode value
+     *
      * @see str_pad()
      *
      * @uses AeString::PAD_LEFT
      * @uses AeString::PAD_RIGHT
      * @uses AeString::PAD_BOTH
      *
-     * @param int|AeInteger   $length
-     * @param string|AeString $string
-     * @param int             $mode
+     * @param int    $length
+     * @param string $string
+     * @param int    $mode
      *
      * @return AeString
      */
@@ -237,8 +242,16 @@ class AeString extends AeScalar implements ArrayAccess
             $length = $length->toInteger()->getValue();
         }
 
-        if ($length <= 0 || $length < $this->length()) {
+        if ($length <= 0) {
+            throw new AeStringException('Invalid length value: length must be greater than zero', 400);
+        }
+
+        if ($length <= $this->length()) {
             return $this;
+        }
+
+        if (!in_array($mode, array(self::PAD_LEFT, self::PAD_RIGHT, self::PAD_BOTH))) {
+            throw new AeStringException('Invalid mode value: expecting one of AeString::PAD constants', 400);
         }
 
         if ($string instanceof AeScalar) {
@@ -250,17 +263,17 @@ class AeString extends AeScalar implements ArrayAccess
             $string = ' ';
         }
 
-        return new AeString(str_pad($this->getValue(), $length, $string, $mode));
+        return new AeString(str_pad($this->_value, $length, $string, $mode));
     }
 
     /**
      * Repeat the string
      *
+     * @throws AeStringException #400 on invalid count value
+     *
      * @see str_repeat()
      *
-     * @throws AeStringException #400 if the value passed is less or equal to 0
-     *
-     * @param int|AeInteger $count number of times to repeat the string
+     * @param int $count number of times to repeat the string
      *
      * @return AeString
      */
@@ -271,10 +284,10 @@ class AeString extends AeScalar implements ArrayAccess
         }
 
         if ($count <= 0) {
-            throw new AeStringException('Count parameter must be greater than 0', 400);
+            throw new AeStringException('Invalid count value: count must be greater than zero', 400);
         }
 
-        return new AeString(str_repeat($this->getValue(), $count));
+        return new AeString(str_repeat($this->_value, $count));
     }
 
     /**
@@ -307,33 +320,30 @@ class AeString extends AeScalar implements ArrayAccess
             return new AeString($string);
         }
 
-        return new AeString(strrev($this->getValue()));
+        return new AeString(strrev($this->_value));
     }
 
     /**
-     * Replace one string with another string
-     *
-     * This implementation does not support array values for the <var>$search</var>
-     * and <var>$replace</var> parameters
+     * Replace one string with another
      *
      * @see str_replace()
      *
-     * @param string|AeString $search
-     * @param string|AeString $replace
+     * @param string|array $search
+     * @param string|array $replace
      *
      * @return AeString
      */
     public function replace($search, $replace)
     {
-        if ($search instanceof AeScalar) {
-            $search = $search->toString()->getValue();
+        if ($search instanceof AeType) {
+            $search = $search->getValue();
         }
 
-        if ($replace instanceof AeScalar) {
-            $replace = $replace->toString()->getValue();
+        if ($replace instanceof AeType) {
+            $replace = $replace->getValue();
         }
 
-        return new AeString(str_replace($search, $replace, $this->getValue()));
+        return new AeString(str_replace($search, $replace, $this->_value));
     }
 
     /**
@@ -355,9 +365,9 @@ class AeString extends AeScalar implements ArrayAccess
      * @uses AeString::FROM_LEFT
      * @uses AeString::FROM_RIGHT
      *
-     * @param string|AeString $needle
-     * @param int             $mode
-     * @param bool|AeBoolean  $case_sensitive
+     * @param string $needle
+     * @param int    $mode
+     * @param bool   $case_sensitive
      *
      * @return AeString
      */
@@ -367,6 +377,10 @@ class AeString extends AeScalar implements ArrayAccess
             $needle = $needle->toString()->getValue();
         }
 
+        if ($case_sensitive instanceof AeScalar) {
+            $case_sensitive = $case_sensitive->toBoolean()->getValue();
+        }
+
         if ($mode == AeString::FROM_RIGHT) {
             return $this->part($this->indexOf($needle, 0, AeString::INDEX_RIGHT, $case_sensitive));
         }
@@ -374,17 +388,17 @@ class AeString extends AeScalar implements ArrayAccess
         if ($case_sensitive === false)
         {
             if (function_exists('mb_stristr')) {
-                return new AeString(mb_stristr($this->getValue(), $needle, false, 'UTF-8'));
+                return new AeString(mb_stristr($this->_value, $needle, false, 'UTF-8'));
             }
 
-            return new AeString(stristr($this->getValue(), $needle));
+            return new AeString(stristr($this->_value, $needle));
         }
 
         if (function_exists('mb_strstr')) {
-            return new AeString(mb_strstr($this->getValue(), $needle, false, 'UTF-8'));
+            return new AeString(mb_strstr($this->_value, $needle, false, 'UTF-8'));
         }
 
-        return new AeString(strstr($this->getValue(), $needle));
+        return new AeString(strstr($this->_value, $needle));
     }
 
     /**
@@ -395,10 +409,10 @@ class AeString extends AeScalar implements ArrayAccess
      *
      * @see substr(), iconv_substr()
      *
-     * @throws AeStringException #400 if the start value exceeds string length
+     * @throws AeStringException #400 on invalid start value
      *
-     * @param int|AeInteger $start
-     * @param int|AeInteger $length
+     * @param int $start
+     * @param int $length
      *
      * @return AeString
      */
@@ -409,7 +423,7 @@ class AeString extends AeScalar implements ArrayAccess
         }
 
         if ($start >= $this->length()) {
-            throw new AeStringException('Start value exceeds string length', 400);
+            throw new AeStringException('Invalid start value: value exceeds string length', 400);
         }
 
         if ($length instanceof AeScalar) {
@@ -417,14 +431,14 @@ class AeString extends AeScalar implements ArrayAccess
         }
 
         if ($length === null) {
-            return new AeString(iconv_substr($this->getValue(), $start, $this->length(), 'UTF-8'));
+            return new AeString(iconv_substr($this->_value, $start, $this->length(), 'UTF-8'));
         }
 
-        return new AeString(iconv_substr($this->getValue(), $start, $length, 'UTF-8'));
+        return new AeString(iconv_substr($this->_value, $start, $length, 'UTF-8'));
     }
 
     /**
-     * Make the string lowercase
+     * Make string lowercase
      *
      * This method uses mb_string functions, when available, to convert the case
      * of a UTF-8 encoded multibyte string
@@ -437,14 +451,14 @@ class AeString extends AeScalar implements ArrayAccess
     public function toLowerCase()
     {
         if (function_exists('mb_strtolower')) {
-            return new AeString(mb_strtolower($this->getValue(), 'UTF-8'));
+            return new AeString(mb_strtolower($this->_value, 'UTF-8'));
         }
 
-        return new AeString(strtolower($this->getValue()));
+        return new AeString(strtolower($this->_value));
     }
 
     /**
-     * Make the string uppercase
+     * Make string uppercase
      *
      * This method uses mb_string functions, when available, to convert the case
      * of a UTF-8 encoded multibyte string
@@ -457,14 +471,14 @@ class AeString extends AeScalar implements ArrayAccess
     public function toUpperCase()
     {
         if (function_exists('mb_strtoupper')) {
-            return new AeString(mb_strtoupper($this->getValue(), 'UTF-8'));
+            return new AeString(mb_strtoupper($this->_value, 'UTF-8'));
         }
 
-        return new AeString(strtoupper($this->getValue()));
+        return new AeString(strtoupper($this->_value));
     }
 
     /**
-     * Make the string camelcase
+     * Make string camelcase
      *
      * A camelcase string is a string where each word begins with a capital
      * letter with no spacings between words.
@@ -527,7 +541,7 @@ class AeString extends AeScalar implements ArrayAccess
         }
 
         $delims = preg_quote(implode('', $delims));
-        $string = preg_replace('#[' . $delims . ']+#u', ' ', $this->getValue());
+        $string = preg_replace('#[' . $delims . ']+#u', ' ', $this->_value);
 
         if (function_exists('mb_strtoupper'))
         {
@@ -553,7 +567,7 @@ class AeString extends AeScalar implements ArrayAccess
     }
 
     /**
-     * Make the string hyphenated
+     * Make string hyphenated
      *
      * A hyphenated string is a string where each word is separated by a hyphen:
      * <code> $string = new AeString('hello world');
@@ -576,18 +590,19 @@ class AeString extends AeScalar implements ArrayAccess
      * @see AeString::toUpperCase(), AeString::toLowerCase(), AeString::toCamelCase(),
      *      AeString::capitalize(), AeString::minusculize()
      *
-     * @param AeString|string $delimiter
+     * @param string $delimiter
+     * @param string $capitals  list of letters to use as capitals
      *
      * @return AeString
      */
-    public function hyphenate($delimiter = '-', $capitals = 'A-ZА-Я')
+    public function hyphenate($delimiter = '-', $capitals = 'A-Z')
     {
         $delimiter = (string) $delimiter;
         $capitals  = (string) $capitals;
         $capitals  = preg_quote($capitals, '#');
 
         // *** Handle spaces
-        if (strpos($this->getValue(), ' ')) {
+        if (strpos($this->_value, ' ')) {
             return $this->replace(' ', $delimiter);
         }
 
@@ -605,7 +620,7 @@ class AeString extends AeScalar implements ArrayAccess
     }
 
     /**
-     * Uppercase the first character of a string
+     * Uppercase first character
      *
      * Capitalize mode can be one of the following:
      *  - {@link AeString::CONVERT_WORD}  - (default) capitalize first character only
@@ -629,21 +644,21 @@ class AeString extends AeScalar implements ArrayAccess
         if ($mode == AeString::CONVERT_ALL)
         {
             if (function_exists('mb_convert_case')) {
-                return new AeString(mb_convert_case($this->getValue(), MB_CASE_TITLE, 'UTF-8'));
+                return new AeString(mb_convert_case($this->_value, MB_CASE_TITLE, 'UTF-8'));
             }
 
-            return new AeString(ucwords($this->getValue()));
+            return new AeString(ucwords($this->_value));
         }
 
         if (function_exists('mb_strtoupper')) {
             return new AeString(mb_strtoupper($this->part(0, 1)->getValue(), 'UTF-8') . $this->part(1));
         }
 
-        return new AeString(ucfirst($this->getValue()));
+        return new AeString(ucfirst($this->_value));
     }
 
     /**
-     * Lowercase the first character of a string
+     * Lowercase first character
      *
      * Minusculize mode can be one of the following:
      *  - {@link AeString::CONVERT_WORD}  - (default) minusculize first character only
@@ -666,8 +681,7 @@ class AeString extends AeScalar implements ArrayAccess
     {
         if ($mode == AeString::CONVERT_ALL)
         {
-            $string = $this->getValue();
-            $words  = preg_split('#(\s+)#u', $string, -1, PREG_SPLIT_DELIM_CAPTURE);
+            $words  = preg_split('#(\s+)#u', $this->_value, -1, PREG_SPLIT_DELIM_CAPTURE);
 
             foreach ($words as $i => $word)
             {
@@ -701,14 +715,14 @@ class AeString extends AeScalar implements ArrayAccess
     }
 
     /**
-     * Return a formatted string
+     * Return formatted string
      *
      * {@link AeString} is used as a format string. Accepts unlimited number of
      * arguments
      *
      * @see sprintf()
      *
-     * @param mixed|AeScalar $arg,...
+     * @param mixed $arg,...
      *
      * @return AeString
      */
@@ -723,13 +737,13 @@ class AeString extends AeScalar implements ArrayAccess
             }
         }
 
-        array_unshift($args, $this->getValue());
+        array_unshift($args, $this->_value);
 
         return new AeString(call_user_func_array('sprintf', $args));
     }
 
     /**
-     * Parse a string according to a format
+     * Parse string according to format
      *
      * @see sscanf()
      *
@@ -743,18 +757,18 @@ class AeString extends AeScalar implements ArrayAccess
             $format = $format->toString()->getValue();
         }
 
-        return new AeArray(sscanf($this->getValue(), $format));
+        return new AeArray(sscanf($this->_value, $format));
     }
 
     /**
-     * Split the string by string
+     * Split string by string
      *
      * @see explode()
      *
-     * @throws AeStringException #400 if separator value is empty
+     * @throws AeStringException #400 on invalid separator value
      *
-     * @param string|AeString $separator
-     * @param int|AeInteger   $limit
+     * @param string $separator
+     * @param int    $limit
      *
      * @return AeArray
      */
@@ -765,7 +779,7 @@ class AeString extends AeScalar implements ArrayAccess
         }
 
         if ($separator === '') {
-            throw new AeStringException('Separator can not be empty', 400);
+            throw new AeStringException('Invalid separator value: separator cannot be empty', 400);
         }
 
         if ($limit instanceof AeScalar) {
@@ -773,10 +787,10 @@ class AeString extends AeScalar implements ArrayAccess
         }
 
         if (!is_null($limit)) {
-            return new AeArray(explode($separator, $this->getValue(), $limit));
+            return new AeArray(explode($separator, $this->_value, $limit));
         }
 
-        return new AeArray(explode($separator, $this->getValue()));
+        return new AeArray(explode($separator, $this->_value));
     }
 
     /**
@@ -798,10 +812,10 @@ class AeString extends AeScalar implements ArrayAccess
      * @uses AeString::INDEX_LEFT
      * @uses AeString::INDEX_RIGHT
      *
-     * @param string|AeString $needle
-     * @param int|AeInteger   $offset
-     * @param int             $mode
-     * @param bool|AeBoolean  $case_sensitive
+     * @param string $needle
+     * @param int    $offset
+     * @param int    $mode
+     * @param bool   $case_sensitive
      *
      * @return int
      */
@@ -824,43 +838,43 @@ class AeString extends AeScalar implements ArrayAccess
             if ($case_sensitive === false)
             {
                 if (function_exists('mb_strripos')) {
-                    return mb_strripos($this->getValue(), $needle, $offset, 'UTF-8');
+                    return mb_strripos($this->_value, $needle, $offset, 'UTF-8');
                 }
 
-                return strripos($this->getValue(), $needle, $offset);
+                return strripos($this->_value, $needle, $offset);
             }
 
             if ($offset !== 0)
             {
                 if (function_exists('mb_strrpos')) {
                     // *** Use mb_string function instead
-                    return mb_strrpos($this->getValue(), $needle, $offset, 'UTF-8');
+                    return mb_strrpos($this->_value, $needle, $offset, 'UTF-8');
                 }
 
                 // *** Emulate $offset parameter for iconv_strrpos
                 if ($offset > 0) {
-                    $string = iconv_substr($this->getValue(), $offset, $this->length(), 'UTF-8');
+                    $string = iconv_substr($this->_value, $offset, $this->length(), 'UTF-8');
                 } else {
-                    $string = iconv_substr($this->getValue(), 0, $offset, 'UTF-8');
+                    $string = iconv_substr($this->_value, 0, $offset, 'UTF-8');
                     $offset = 0;
                 }
 
                 return iconv_strrpos($string, $needle, 'UTF-8') + $offset;
             }
 
-            return iconv_strrpos($this->getValue(), $needle, 'UTF-8');
+            return iconv_strrpos($this->_value, $needle, 'UTF-8');
         }
         
         if ($case_sensitive === false)
         {
             if (function_exists('mb_stripos')) {
-                return mb_stripos($this->getValue(), $needle, $offset, 'UTF-8');
+                return mb_stripos($this->_value, $needle, $offset, 'UTF-8');
             }
 
-            return stripos($this->getValue(), $needle, $offset);
+            return stripos($this->_value, $needle, $offset);
         }
 
-        return iconv_strpos($this->getValue(), $needle, $offset, 'UTF-8');
+        return iconv_strpos($this->_value, $needle, $offset, 'UTF-8');
     }
 
     /**
@@ -877,7 +891,7 @@ class AeString extends AeScalar implements ArrayAccess
      */
     public function length()
     {
-        return iconv_strlen($this->getValue(), 'UTF-8');
+        return iconv_strlen($this->_value, 'UTF-8');
     }
 
     /**
@@ -898,7 +912,9 @@ class AeString extends AeScalar implements ArrayAccess
      *
      * Method for the {@link ArrayAccess} interface implementation
      *
-     * @param int|AeInteger $offset
+     * @throws AeStringException #400 on invalid offset value
+     *
+     * @param int $offset
      *
      * @return bool
      */
@@ -909,7 +925,7 @@ class AeString extends AeScalar implements ArrayAccess
         }
 
         if (!is_int($offset)) {
-            return false;
+            throw new AeStringException('Invalid offset value: expecting int, ' . AeType::of($offset) . ' given', 400);
         }
 
         return $this->length() > $offset;
@@ -920,7 +936,9 @@ class AeString extends AeScalar implements ArrayAccess
      *
      * Method for the {@link ArrayAccess} interface implementation
      *
-     * @param int|AeInteger $offset
+     * @throws AeStringException #413 if offset exceeds string length
+     *
+     * @param int $offset
      *
      * @return AeString
      */
@@ -930,8 +948,8 @@ class AeString extends AeScalar implements ArrayAccess
             $offset = $offset->toInteger()->getValue();
         }
 
-        if (!is_int($offset) || !$this->offsetExists($offset)) {
-            return null;
+        if (!$this->offsetExists($offset)) {
+            throw new AeStringException('Invalid offset value: offset exceeds string length', 413);
         }
 
         return $this->charAt($offset);
@@ -942,10 +960,12 @@ class AeString extends AeScalar implements ArrayAccess
      *
      * Method for the {@link ArrayAccess} interface implementation
      *
-     * @throws AeStringException #400 if offset is invalid
+     * @throws AeStringException #413 if offset exceeds string length
      *
-     * @param int|AeInteger   $offset
-     * @param string|AeString $value
+     * @param int    $offset
+     * @param string $value
+     *
+     * @return AeString self
      */
     public function offsetSet($offset, $value)
     {
@@ -953,8 +973,8 @@ class AeString extends AeScalar implements ArrayAccess
             $offset = $offset->toInteger()->getValue();
         }
 
-        if (!is_int($offset) || !$this->offsetExists($offset)) {
-            throw new AeStringException('Invalid offset value', 400);
+        if (!$this->offsetExists($offset)) {
+            throw new AeStringException('Invalid offset value: offset exceeds string length', 413);
         }
 
         if ($value instanceof AeScalar) {
@@ -972,6 +992,8 @@ class AeString extends AeScalar implements ArrayAccess
                 . $this->part($offset + 1)->getValue();
 
         $this->setValue($string);
+
+        return $this;
     }
 
     /**
@@ -979,9 +1001,15 @@ class AeString extends AeScalar implements ArrayAccess
      *
      * Method for the {@link ArrayAccess} interface implementation
      *
-     * @throws AeStringException #400 if offset is invalid
+     * Unlike with PHP's native string, you can unset an existing string offset,
+     * effectively removing a character from a string:
+     * <code> $string = new AeString('foo');
+     * unset($string[0]);
+     * echo $string; // prints "oo"</code>
      *
-     * @param int|AeInteger $offset
+     * @throws AeStringException #413 if offset exceeds string length
+     *
+     * @param int $offset
      */
     public function offsetUnset($offset)
     {
@@ -989,8 +1017,8 @@ class AeString extends AeScalar implements ArrayAccess
             $offset = $offset->toInteger()->getValue();
         }
 
-        if (!is_int($offset) || !$this->offsetExists($offset)) {
-            throw new AeStringException('Invalid offset value', 400);
+        if (!$this->offsetExists($offset)) {
+            throw new AeStringException('Invalid offset value: offset exceeds string length', 413);
         }
 
         $this->setValue($this->part(0, $offset)->getValue() . $this->part($offset + 1)->getValue());

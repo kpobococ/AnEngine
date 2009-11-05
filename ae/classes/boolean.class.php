@@ -34,26 +34,28 @@ class AeBoolean extends AeScalar
     /**
      * Boolean constructor
      *
-     * @throws AeBooleanException #400 if the value passed is not a boolean
+     * @see AeBoolean::setValue()
      *
      * @param bool $value
      */
     public function __construct($value = null)
     {
-        if (!is_null($value) && !$this->setValue($value)) {
-            throw new AeBooleanException('Invalid value passed: expecting null or bool, ' . gettype($value) . ' given', 400);
+        if (!is_null($value)) {
+            $this->setValue($value);
         }
     }
 
     /**
      * Set a boolean value
      *
+     * Unlike PHP's cast to boolean, a string 'false' will result in boolean
+     * false being set.
+     *
+     * @throws AeBooleanException #400 on invalid value
+     *
      * @param bool $value
      *
-     * @todo return self
-     * @todo throw an exception on invalid value
-     *
-     * @return bool true on valid value, false otherwise.
+     * @return AeBoolean self
      */
     public function setValue($value)
     {
@@ -64,12 +66,12 @@ class AeBoolean extends AeScalar
         $value = (bool) $value;
 
         if (!is_bool($value)) {
-            return false;
+            throw new AeBooleanException('Invalid value passed: expecting bool, ' . AeType::of($value) . ' given', 400);
         }
 
         $this->_value = $value;
 
-        return true;
+        return $this;
     }
 
     /**

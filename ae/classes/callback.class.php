@@ -59,15 +59,15 @@ class AeCallback extends AeObject
      * // Empty callback
      * $cb = new AeCallback();</code>
      *
-     * @throws AeCallbackException #400 if an invalid callback value is passed
+     * @see AeCallback::setValue()
      *
      * @param object|string|array|null $callback
      * @param string                   $method
      */
     public function __construct($callback = null, $method = null, $arguments = null)
     {
-        if (!is_null($callback) && !$this->setValue($callback, $method)) {
-            throw new AeCallbackException('Invalid callback value passed', 400);
+        if (!is_null($callback)) {
+            $this->setValue($callback, $method);
         }
 
         if (!is_null($arguments)) {
@@ -81,6 +81,29 @@ class AeCallback extends AeObject
      * Set a new callback value. See {@link AeCallback::__construct()
      * constructor} for possible usages.
      *
+     * <b>NOTE:</b> If an instance of AeString is passed as the first parameter,
+     * a second parameter is present and there is a method of an AeString
+     * instance by that name, that instance will be treated as an object rather
+     * than a class name:
+     * <code> class Test
+     * {
+     *     public static function getValue()
+     *     {
+     *         return 'Test::getValue()';
+     *     }
+     * }
+     *
+     * $className = new AeString('Test');
+     *
+     * $c = new AeCallback($className, 'getValue');
+     * echo $c->call(); // this prints "Test" instead of "Test::getValue()"
+     *
+     * // You can use type casting as a workaround:
+     * $c = new AeCallback((string) $className, 'getValue');
+     * echo $c->call(); // this prints "Test::getValue()"</code>
+     *
+     * @throws AeCallbackException #400 on invalid callback passed
+     *
      * @param object|string|array $callback
      * @param string|null         $method
      *
@@ -88,31 +111,63 @@ class AeCallback extends AeObject
      */
     public function setValue($callback, $method = null)
     {
-        if (is_array($callback) || (is_string($callback) && !is_string($method)))
-        {
-            // *** Raw callback
-            if (!is_callable($callback)) {
-                return false;
-            }
-
-            $this->_value = $callback;
-        } else if (is_string($method) && (is_object($callback) || is_string($callback))) {
-            // *** Object or class
-            if (!is_callable(array($callback, $method))) {
-                return false;
-            }
-
-            $this->_value = array($callback, $method);
-        } else {
-            return false;
+        if ($method instanceof AeType) {
+            $method = $method->getValue();
         }
 
-        return true;
+        if ($callback instanceof AeType)
+        {
+            // *** Check for a special string case
+            if ($method === null || !($callback instanceof AeString) || !$callback->methodExists($method)) {
+                $callback = $callback->getValue();
+            }
+        }
+
+        if (is_string($callback))
+        {
+            if (is_string($method)) {
+                // *** This is a static class method call
+                $value = array($callback, $method);
+            } else {
+                // *** This is a function call
+                $value = $callback;
+            }
+        } else if (is_array($callback)) {
+            // *** This is either a method call
+            $value = $callback;
+        } else if (is_object($callback)) {
+            // *** This is an object method call
+            $value = array($callback, $method);
+        } else {
+            // *** This is bullshit
+            throw new AeCallbackException('Invalid callback passed: expecting object, array or string, ' . AeType::of($callback) . ' given', 400);
+        }
+
+        if (!is_callable($callback)) {
+            throw new AeCallbackException('Invalid callback passed: callback is not callable', 400);
+        }
+
+        $this->_value = $callback;
+
+        return $this;
     }
 
+    /**
+     * Set callback arguments
+     *
+     * This method allows you to provide a default set of parameters passed to
+     * the callback. These parameters are used if no parameters are passed to
+     * the {@link AeCallback::call()} method
+     *
+     * @param array $arguments
+     *
+     * @return AeCallback self
+     */
     public function setArguments($arguments)
     {
         $this->_arguments = (array) $arguments;
+
+        return $this;
     }
 
     /**

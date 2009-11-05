@@ -34,38 +34,37 @@ class AeFloat extends AeNumeric
     /**
      * Float constructor
      *
-     * @throws AeFloatException #400 if the value passed is not a float
+     * @see AeFloat::setValue()
      *
      * @param float $value
      */
     public function __construct($value = null)
     {
-        if (!is_null($value) && !$this->setValue($value)) {
-            throw new AeFloatException('Invalid value passed: expecting null or float, ' . gettype($value) . ' given', 400);
+        if (!is_null($value)) {
+            $this->setValue($value);
         }
     }
 
     /**
      * Set a float value
      *
-     * @todo return self
-     * @todo throw an exception on invalid value
+     * @throws AeFloatException #400 on invalid value
      *
      * @param float $value
      *
-     * @return bool true on valid value, false otherwise.
+     * @return AeFloat self
      */
     public function setValue($value)
     {
         $value = (float) $value;
 
         if (!is_float($value)) {
-            return false;
+            throw new AeFloatException('Invalid value passed: expecting float, ' . AeType::of($value) . ' given', 400);
         }
 
         $this->_value = $value;
 
-        return true;
+        return $this;
     }
 
     /**
@@ -73,7 +72,7 @@ class AeFloat extends AeNumeric
      *
      * @see round()
      *
-     * @param int|AeInteger $precision
+     * @param int $precision
      *
      * @return AeFloat
      */
@@ -83,7 +82,7 @@ class AeFloat extends AeNumeric
             $precision = $precision->toInteger()->getValue();
         }
 
-        return new AeFloat(round($this->getValue(), $precision));
+        return new AeFloat(round($this->_value, $precision));
     }
 
     /**
@@ -95,7 +94,7 @@ class AeFloat extends AeNumeric
      */
     public function floor()
     {
-        return new AeFloat(floor($this->getValue()));
+        return new AeFloat(floor($this->_value));
     }
 
     /**
@@ -107,7 +106,7 @@ class AeFloat extends AeNumeric
      */
     public function ceil()
     {
-        return new AeFloat(ceil($this->getValue()));
+        return new AeFloat(ceil($this->_value));
     }
 
     /**
@@ -115,9 +114,9 @@ class AeFloat extends AeNumeric
      *
      * @see number_format()
      *
-     * @param int|AeInteger   $decimals      the number of decimal points
-     * @param string|AeString $dec_point     the separator for the decimal point
-     * @param string|AeString $thousands_sep the thousands separator
+     * @param int    $decimals      the number of decimal points
+     * @param string $dec_point     the separator for the decimal point
+     * @param string $thousands_sep the thousands separator
      *
      * @return AeString
      */
@@ -135,7 +134,7 @@ class AeFloat extends AeNumeric
             $thousands_sep = $thousands_sep->toString()->charAt(0, ',')->getValue();
         }
 
-        return new AeString(number_format($this->getValue(), $decimals, $dec_point, $thousands_sep));
+        return new AeString(number_format($this->_value, $decimals, $dec_point, $thousands_sep));
     }
 }
 

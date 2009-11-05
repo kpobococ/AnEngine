@@ -55,14 +55,14 @@ class AeInteger extends AeNumeric
     /**
      * Integer constructor
      *
-     * @throws AeIntegerException #400 if the value passed is not an integer
+     * @see AeInteger::setValue()
      *
      * @param int $value
      */
     public function __construct($value = null)
     {
-        if (!is_null($value) && !$this->setValue($value)) {
-            throw new AeIntegerException('Invalid value passed: expecting null or int, ' . gettype($value) . ' given', 400);
+        if (!is_null($value)) {
+            $this->setValue($value);
         }
     }
 
@@ -73,31 +73,31 @@ class AeInteger extends AeNumeric
      * will be converted to integer. If the value is out of the integer bounds,
      * false is returned
      *
-     * @todo return self
-     * @todo throw an exception on invalid value
+     * @throws AeIntegerException #413 if value is out of integer range
+     * @throws AeIntegerException #400 on invalid value
      *
      * @uses AeInteger::MIN
      * @uses AeInteger::MAX
      *
      * @param int $value
      *
-     * @return bool true on valid value, false otherwise.
+     * @return AeInteger self
      */
     public function setValue($value)
     {
         if ($value < self::MIN || $value > self::MAX) {
-            return false;
+            throw new AeIntegerException('Invalid value passed: value is out of integer range', 413);
         }
 
         $value = (int) $value;
 
         if (!is_int($value)) {
-            return false;
+            throw new AeIntegerException('Invalid value passed: expecting int, ' . AeType::of($value) . ' given', 400);
         }
 
         $this->_value = $value;
 
-        return true;
+        return $this;
     }
 }
 

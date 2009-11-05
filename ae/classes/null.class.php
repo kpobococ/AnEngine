@@ -34,7 +34,7 @@ class AeNull extends AeType
      *
      * @param null $value
      *
-     * @return bool
+     * @return AeNull self
      */
     public function setValue($value)
     {

@@ -129,7 +129,7 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
      * $array[0] = 1;
      * $array[1] = 'two'; </code>
      *
-     * @throws AeArrayException #400 if the value passed is not valid
+     * @see AeArray::setValue()
      *
      * @param array|mixed $value       an array or first element of an array
      * @param mixed       $element,... elements of an array
@@ -159,8 +159,8 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
             } break;
         }
 
-        if (!is_null($value) && !$this->setValue($value)) {
-            throw new AeArrayException('Invalid value passed: expecting null or array, ' . AeType::of($value) . ' given', 400);
+        if (!is_null($value)) {
+            $this->setValue($value);
         }
     }
 
@@ -170,11 +170,13 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
      * Creates an array containing a range of elements, using the {@link http://php.net/range range()}
      * function.
      *
+     * @throws AeArrayException #400 on unsupported parameter values
+     *
      * @see http://php.net/range
      *
-     * @param AeScalar|mixed $start
-     * @param AeScalar|mixed $end
-     * @param AeScalar|mixed $step
+     * @param mixed $start
+     * @param mixed $end
+     * @param mixed $step
      *
      * @return AeArray
      */
@@ -206,19 +208,21 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
     /**
      * Set an array value
      *
+     * @throws AeArrayException #400 on invalid value
+     *
      * @param array $value
      *
-     * @return bool true on valid value, false otherwise.
+     * @return AeArray self
      */
     public function setValue($value)
     {
         if (!is_array($value)) {
-            return false;
+            throw new AeArrayException('Invalid value passed: expecting array, ' . AeType::of($value) . ' given', 400);
         }
 
         $this->_value = $this->_safeValue($value);
 
-        return true;
+        return $this;
     }
 
     /**
@@ -277,7 +281,7 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
      *
      * @see implode()
      *
-     * @param string|AeString $glue
+     * @param string $glue
      *
      * @return AeString
      */
@@ -287,7 +291,7 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
             $glue = $glue->toString()->getValue();
         }
 
-        return new AeString(implode($glue, $this->getValue()));
+        return new AeString(implode($glue, $this->_value));
     }
 
     /**
@@ -299,30 +303,21 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
      */
     public function flip()
     {
-        return new AeArray(array_flip($this->getValue()));
+        return new AeArray(array_flip($this->_value));
     }
 
     /**
      * Push elements onto the end of the array
      *
-     * Unlike {@link array_push()}, this method returns the new array.
-     * Furthermore, the previous array is not modified:
-     * <code> $arr1 = new AeArray(1, 2);
-     * $arr2 = $arr1->push(3);
-     *
-     * print_r($arr1->getValue()); // Array(1, 2)
-     * print_r($arr2->getValue()); // Array(1, 2, 3)</code>
-     *
      * @see array_push()
      *
-     * @param mixed|AeType $value,...
+     * @param mixed $value,...
      *
-     * @return AeArray
+     * @return AeArray self
      */
     public function push($value)
     {
-        $args  = func_get_args();
-        $array = $this->getValue();
+        $args = func_get_args();
 
         foreach ($args as $arg)
         {
@@ -330,10 +325,10 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
                 $arg = $arg->getValue();
             }
 
-            array_push($array, $arg);
+            array_push($this->_value, $arg);
         }
 
-        return new AeArray($array);
+        return $this;
     }
 
     /**
@@ -341,50 +336,38 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
      *
      * @see array_pop()
      *
-     * @return AeType|null|object
+     * @return AeType|mixed
      */
     public function pop()
     {
-        $array  = $this->getValue();
-        $return = array_pop($array);
+        $return = array_pop($this->_value);
 
-        $this->setValue($array);
-
-        return new AeArray($return);
+        return AeType::wrap($return);
     }
 
     /**
      * Prepend one or more elements to the beginning of the array
      *
-     * Unlike {@link array_unshift()}, this method returns the new array.
-     * Furthermore, the previous array is not modified:
-     * <code> $arr1 = new AeArray(2, 3);
-     * $arr2 = $arr1->unshift(1);
-     *
-     * print_r($arr1->getValue()); // Array(2, 3)
-     * print_r($arr2->getValue()); // Array(1, 2, 3)</code>
-     *
      * @see array_unshift()
      *
-     * @param mixed|AeScalar $value,...
+     * @param mixed $value,...
      *
-     * @return AeArray
+     * @return AeArray self
      */
     public function unshift($value)
     {
         $args  = func_get_args();
-        $array = $this->getValue();
 
         foreach ($args as $arg)
         {
-            if ($arg instanceof AeScalar || $arg instanceof AeArray) {
+            if ($arg instanceof AeType) {
                 $arg = $arg->getValue();
             }
 
-            array_unshift($array, $arg);
+            array_unshift($this->_value, $arg);
         }
 
-        return new AeArray($array);
+        return $this;
     }
 
     /**
@@ -392,16 +375,13 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
      *
      * @see array_shift()
      *
-     * @return AeScalar|AeArray|null|object
+     * @return AeType|mixed
      */
     public function shift()
     {
-        $array  = $this->getValue();
-        $return = array_shift($array);
+        $return = array_shift($this->_value);
 
-        $this->setValue($array);
-
-        return AeType::wrapReturn($return);
+        return AeType::wrap($return);
     }
 
     /**
@@ -414,16 +394,16 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
      * If <var>$count</var> is greater than 1, an {@link AeArray} of keys or
      * values (depending on the <var>$mode</var>) is returned.
      *
-     * If <var>$count</var> is 1, either mixed or AeScalar is returned
+     * If <var>$count</var> is 1, AeScalar is returned
      *
      * @see array_rand()
      *
-     * @throws AeArrayException #400 if count is less than 1
+     * @throws AeArrayException #400 on invalid count value
      *
-     * @param int|AeInteger $count
-     * @param int           $mode
+     * @param int $count
+     * @param int $mode
      *
-     * @return int|AeScalar|AeArray
+     * @return AeType
      */
     public function random($count = 1, $mode = AeArray::RANDOM_VALUES)
     {
@@ -431,16 +411,16 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
             $count = $count->toInteger()->getValue();
         }
 
-        if ($count < 1) {
-            throw new AeArrayException('Count must be at least 1', 400);
+        if ($count <= 0) {
+            throw new AeArrayException('Invalid count value: count must be greater than zero', 400);
         }
 
-        $keys = array_rand($this->getValue(), $count);
+        $keys = array_rand($this->_value, $count);
 
         if ($mode == AeArray::RANDOM_VALUES)
         {
             if ($count == 1) {
-                return $this[$keys];
+                return AeType::wrap($this[$keys]);
             }
 
             $return = array();
@@ -449,14 +429,10 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
                 $return[] = $this[$offset];
             }
 
-            return AeType::wrapReturn($return);
+            return AeType::wrap($return);
         }
 
-        if ($count == 1) {
-            return $keys;
-        }
-
-        return AeType::wrapReturn($keys);
+        return AeType::wrap($keys);
     }
 
     /**
@@ -464,7 +440,7 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
      *
      * @see array_reverse()
      *
-     * @param bool|AeBoolean $preserve_keys
+     * @param bool $preserve_keys
      *
      * @return AeArray
      */
@@ -474,7 +450,7 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
             $preserve_keys = $preserve_keys->toBoolean()->getValue();
         }
 
-        return new AeArray(array_reverse($this->getValue(), $preserve_keys));
+        return new AeArray(array_reverse($this->_value, $preserve_keys));
     }
 
     /**
@@ -504,12 +480,12 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
      * echo $arr1[0] == $arr2[0] ? 'true' : 'false'; // false</code>
      *
      * @param string|array|AeCallback $callback
-     * @param bool|AeBoolean          $passKey   should the element key be passed
-     *                                           to the callback function or not
+     * @param bool                    $passKey  should the element key be passed
+     *                                          to the callback function or not
      *
      * @return AeArray
      */
-    public function walk($callback, $passKey = false)
+    public function walk($callback)
     {
         if (!($callback instanceof AeCallback)) {
             $callback = new AeCallback($callback);
@@ -521,17 +497,8 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
 
         $array = clone $this;
 
-        foreach ($array as $key => $value)
-        {
-            if ((bool) $passKey) {
-                $v = @$callback->call($value, $key);
-            } else {
-                $v = @$callback->call($value);
-            }
-
-            if ($v !== null) {
-                $array[$key] = $v;
-            }
+        foreach ($array as $key => $value) {
+            $array[$key] = @$callback->call($value, $key);
         }
 
         return $array;
@@ -585,7 +552,7 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
      * @see natsort(), natcasesort()
      * @see sort(), rsort(), ksort(), krsort(), asort(), arsort()
      *
-     * @throws AeArrayException #400 if mode is invalid
+     * @throws AeArrayException #400 on invalid mode value
      *
      * @param int $mode
      * @param int $flags
@@ -617,7 +584,7 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
         );
 
         if (!in_array($mode, $modes)) {
-            throw new AeArrayException('Mode value is invalid', 400);
+            throw new AeArrayException('Invalid mode value: expecting one of AeArray::SORT constants', 400);
         }
 
         return $this->_sort($mode, $bykey, $nocase, $reverse, $savekeys);
@@ -662,7 +629,7 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
             return $this->_sortNoCase($mode, $bykey, $reverse, $savekeys);
         }
 
-        $values = $this->getValue();
+        $values = $this->_value;
 
         if ($bykey)
         {
@@ -717,7 +684,7 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
         if ($bykey) {
             $values = $this->getKeys()->getValue();
         } else {
-            $values = $this->getValue();
+            $values = $this->_value;
         }
 
         // *** Make values case-insensitive
@@ -774,7 +741,7 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
             $value = $this->getKeys()->getValue();
         } else {
             // *** Sort values
-            $value = $this->getValue();
+            $value = $this->_value;
         }
 
         if ($nocase) {
@@ -820,7 +787,7 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
      */
     public function getKeys()
     {
-        return new AeArray(array_keys($this->getValue()));
+        return new AeArray(array_keys($this->_value));
     }
 
     /**
@@ -832,41 +799,41 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
      */
     public function getValues()
     {
-        return new AeArray(array_values($this->getValue()));
+        return new AeArray(array_values($this->_value));
     }
 
     /**
      * Return first value
      *
-     * @return AeType|mixed
+     * @return AeType
      */
     public function getFirst()
     {
         if ($this->length() == 0) {
-            return AeType::wrapReturn(null);
+            return AeType::wrap(null);
         }
 
-        $keys = array_keys($this->getValue());
+        $keys = array_keys($this->_value);
 
-        return $this->offsetGet($keys[0]);
+        return AeType::wrap($this->_value[$keys[0]]);
     }
 
     /**
      * Return last value
      *
-     * @return AeType|mixed
+     * @return AeType
      */
     public function getLast()
     {
         $length = $this->length();
 
         if ($length == 0) {
-            return AeType::wrapReturn(null);
+            return AeType::wrap(null);
         }
 
         $keys = array_keys($this->getValue());
 
-        return $this->offsetGet($keys[$length - 1]);
+        return AeType::wrap($this->_value[$keys[$length - 1]]);
     }
 
     /**
@@ -883,11 +850,13 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
      * This is due to the fact, that the method does not manipulate the array
      * in any way but is informational.
      *
+     * @throws AeArrayException #400 on invalid mode value
+     *
      * @see array_keys(), array_search()
      *
-     * @param mixed|AeScalar $needle
-     * @param int            $mode
-     * @param bool|AeBoolean $strict
+     * @param mixed $needle
+     * @param int   $mode
+     * @param bool  $strict
      *
      * @return bool|int|array
      */
@@ -904,20 +873,21 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
         switch ($mode)
         {
             case AeArray::FIND_RIGHT: {
-                $return = array_keys($this->getValue(), $needle, $strict);
+                $return = array_keys($this->_value, $needle, $strict);
                 return count($return) > 0 ? end($return) : false;
             } break;
 
             case AeArray::FIND_ALL: {
-                $return = array_keys($this->getValue(), $needle, $strict);
+                $return = array_keys($this->_value, $needle, $strict);
                 return count($return) > 0 ? $return : false;
             } break;
 
-            case AeArray::FIND_LEFT:
-            default: {
-                return array_search($needle, $this->getValue(), $strict);
+            case AeArray::FIND_LEFT: {
+                return array_search($needle, $this->_value, $strict);
             } break;
         }
+
+        throw new AeArrayException('Invalid mode value: expecting one of AeArray::FIND constants', 400);
     }
 
     /**
@@ -975,9 +945,11 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
      *
      * Method for the {@link ArrayAccess} interface implementation
      *
-     * @param mixed|AeScalar $offset
+     * @throws AeArrayException #413 if offset does not exist
      *
-     * @return AeScalar|AeArray|mixed
+     * @param mixed $offset
+     *
+     * @return AeType
      */
     public function offsetGet($offset)
     {
@@ -986,12 +958,10 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
         }
 
         if (!$this->offsetExists($offset)) {
-            // *** Support ArrayAccess by returning an array if value is not set
-            $this->_value[$offset] = new AeArray;
-            return $this->_value[$offset];
+            throw new AeArrayException('Invalid offset value: offset does not exist', 413);
         }
 
-        return AeType::wrapReturn($this->_value[$offset]);
+        return AeType::wrap($this->_value[$offset]);
     }
 
     /**
@@ -999,8 +969,8 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
      *
      * Method for the {@link ArrayAccess} interface implementation
      *
-     * @param mixed|AeScalar $offset
-     * @param mixed          $value
+     * @param mixed $offset
+     * @param mixed $value
      *
      * @return AeArray self
      */
@@ -1024,6 +994,8 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
      *
      * Method for the {@link ArrayAccess} interface implementation
      *
+     * @throws AeArrayException #413 if offset does not exist
+     *
      * @param mixed|AeScalar $offset
      * 
      * @return AeArray self
@@ -1034,7 +1006,9 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
             $offset = $offset->getValue();
         }
 
-        unset($this->_value[$offset]);
+        if ($this->offsetExists($offset)) {
+            unset($this->_value[$offset]);
+        }
 
         return $this;
     }
