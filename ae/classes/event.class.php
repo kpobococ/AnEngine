@@ -4,25 +4,17 @@
  *
  * See {@link AeEvent} class documentation.
  *
- * @requires PHP 5.2.0
- *
  * @author Anton Suprun <kpobococ@gmail.com>
  * @version 1.0
  * @package AnEngine
  * @todo add subpackage once custom documentor is done //Framework-Types
  */
 
-if (!version_compare(PHP_VERSION, '5.2.0', '>=')) {
-    throw new AeEventException('The AeEvent class requires PHP version 5.2.0 or later', 503);
-}
-
 /**
  * Event class
  *
  * This class is a basic event and a global event dispatcher for the whole
  * framework.
- *
- * @requires PHP 5.2.0
  *
  * @todo consider removing static functionality in favor of AeObject event
  *       handling methods
@@ -59,12 +51,6 @@ class AeEvent extends AeObject
     private $_preventDefault  = false;
 
     /**
-     * Global events array
-     * @var array
-     */
-    protected static $_events = array();
-
-    /**
      * Event constructor
      *
      * @param string $name   event name
@@ -72,7 +58,7 @@ class AeEvent extends AeObject
      */
     public function __construct($name, AeObject $target = null)
     {
-        $this->_name   = self::_getName($name);
+        $this->_name   = strtolower((string) $name);
         $this->_target = $target;
     }
 
@@ -111,6 +97,16 @@ class AeEvent extends AeObject
         $this->stopPropagation();
     }
 
+    public function getPreventDefault()
+    {
+        return $this->_preventDefault;
+    }
+
+    public function getStopPropagation()
+    {
+        return $this->_stopPropagation;
+    }
+
     /**
      * Create event listener
      *
@@ -129,134 +125,6 @@ class AeEvent extends AeObject
         }
 
         return new AeEvent_Listener($callback);
-    }
-
-    // *** Event dispatching API
-    /**
-     * Add event
-     *
-     * Registers an event listener for the event, identified by <var>$name</var>,
-     * using <var>$listener</var> as the listener callback. The third parameter
-     * defines that the event should be registered for a certain object instead
-     * of it being registered globally.
-     *
-     * You can also pass an associative array of name/listener pairs to be
-     * added, in which case the second argument should be null
-     *
-     * @see AeObject::addEvent()
-     *
-     * @param array|string            $name
-     * @param AeCallback|array|string $listener
-     * @param AeObject                $target
-     *
-     * @return AeEvent_Listener
-     */
-    public static function add($name, $listener, AeObject $target = null)
-    {
-        $type = AeType::of($name);
-
-        if ($type == 'array')
-        {
-            $return = array();
-
-            foreach ($type as $n => $l) {
-                $return[$n] = self::add($n, $l, $target);
-            }
-
-            return $return;
-        } else if ($type != 'string') {
-            throw new AeEventException('Invalid name type: expecting array or string, ' . $type . ' given', 400);
-        }
-
-        $name     = self::_getName($name);
-        $listener = self::listener($listener);
-
-        self::_checkEvents($name, $target);
-
-        if ($target !== null) {
-            $target->___events[$name][] = $listener;
-        } else {
-            self::$_events[$name][] = $listener;
-        }
-
-        return $listener;
-    }
-
-    /**
-     * Remove event
-     *
-     * Unregisteres an event listener for the event, identified by <var>$name</var>,
-     * using <var>$listener</var> to identify the actual function to remove. The
-     * third parameter defines that the event should be unregistered for a certain
-     * object instead of it being unregistered globally.
-     *
-     * You can also pass an associative array of name/listener pairs to be
-     * removed, in which case the second argument should be null
-     *
-     * @see AeObject::removeEvent()
-     *
-     * @param array|string            $name
-     * @param AeCallback|array|string $listener
-     * @param AeObject                $target
-     *
-     * @return AeEvent_Listener
-     */
-    public static function remove($name, $listener, AeObject $target = null)
-    {
-        $type = AeType::of($name);
-
-        if ($type == 'array')
-        {
-            $return = array();
-
-            foreach ($name as $n => $l) {
-                $return[$n] = self::remove($n, $l, $target);
-            }
-
-            return $return;
-        } else if ($type != 'string') {
-            throw new AeEventException('Invalid name type: expecting array or string, ' . $type . ' given', 400);
-        }
-
-        $name   = self::_getName($name);
-        $events = self::_getEvents($name, $target);
-
-        if ($listener === null)
-        {
-            if ($target !== null) {
-                unset($target->___events[$name]);
-            } else {
-                unset(self::$_events[$name]);
-            }
-
-            return $events;
-        } else if (!($listener instanceof AeEvent_Listener)) {
-            throw new AeEventException('Invalid listener type: expecting instance of AeEvent_Listener, ' . AeType::of($listener) . ' given', 400);
-        }
-
-        $hash = spl_object_hash($listener);
-
-        foreach ($events as $i => $l)
-        {
-            $h = spl_object_hash($l);
-
-            if ($hash === $h)
-            {
-                unset($events[$i]);
-
-                $events = array_values($events);
-
-                if ($target !== null) {
-                    $target->___events[$name] = $events;
-                } else {
-                    self::$_events[$name] = $events;
-                }
-
-                return $l;
-            }
-        }
-
-        return false;
     }
 
     /**

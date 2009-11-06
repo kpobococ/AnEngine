@@ -4,8 +4,6 @@
  *
  * See {@link AeEvent_Listener} class documentation.
  *
- * @requires PHP 5.2.0
- *
  * @author Anton Suprun <kpobococ@gmail.com>
  * @version 1.0
  * @package AnEngine
@@ -20,8 +18,6 @@
  * AeEvent::stop()} method, cancelling all subsequent event listener executions
  * and stopping any default action on the event target, if the feature is
  * supported
- *
- * @requires PHP 5.2.0
  *
  * @author Anton Suprun <kpobococ@gmail.com>
  * @version 1.0

@@ -4,8 +4,6 @@
  *
  * See {@link AeDate_Interval} class documentation.
  *
- * @requires PHP 5.2.0
- *
  * @author Anton Suprun <kpobococ@gmail.com>
  * @version 1.0
  * @package AnEngine
@@ -19,8 +17,6 @@
  * data type. This class is used when adding to, subtracting from or calculating
  * difference between AeDate class instances. See {@link AeDate::add()}, {@link
  * AeDate::subtract()} and {@link AeDate::difference()} methods
- *
- * @requires PHP 5.2.0
  *
  * @author Anton Suprun <kpobococ@gmail.com>
  * @version 1.0
@@ -50,10 +46,6 @@ class AeDate_Interval extends AeObject
      */
     public function __construct($value = 0)
     {
-        if (!version_compare(PHP_VERSION, '5.2.0', '>=')) {
-            throw new AeDateException('The AeDate class requires PHP version 5.2.0 or later', 503);
-        }
-
         if (!is_null($value) && !$this->setValue($value)) {
             throw new AeDateIntervalException('Invalid interval value passed', 400);
         }

@@ -4,8 +4,6 @@
  *
  * See {@link AeDate} class documentation.
  *
- * @requires PHP 5.2.0
- *
  * @author Anton Suprun <kpobococ@gmail.com>
  * @version 1.0
  * @package AnEngine
@@ -19,8 +17,6 @@
  * type. The Date class package also includes separate classes for working with
  * time intervals and time zones using {@link AeDate_Interval} and {@link
  * AeDate_Timezone} classes.
- *
- * @requires PHP 5.2.0
  *
  * @author Anton Suprun <kpobococ@gmail.com>
  * @version 1.0
@@ -129,24 +125,14 @@ class AeDate extends AeObject
 
     /**
      * Constructor
-     * 
-     * See the {@link AeDate::setValue() setValue()} method documentation for a
-     * description of supported values
      *
-     * @throws AeDateException #400 if invalid value is passed
-     * @throws AeDateException #503 if the PHP version is less that 5.2.0
+     * @see AeDate::setValue()
      *
-     * @param AeArray|AeString|AeFloat|AeInteger|array|string|float|int $value date value
+     * @param array|string|float|int $value date value
      */
     public function __construct($value = null)
     {
-        if (!version_compare(PHP_VERSION, '5.2.0', '>=')) {
-            throw new AeDateException('The AeDate class requires PHP version 5.2.0 or later', 503);
-        }
-
-        if (!$this->setValue($value)) {
-            throw new AeDateException('Invalid value passed: ' . $value, 400);
-        }
+        $this->setValue($value);
     }
 
     /**
@@ -163,10 +149,12 @@ class AeDate extends AeObject
      * $d3 = new AeDate(978274800); // Unix timestamp
      *
      * echo $d1 . "\n" . $d2 . "\n" . $d3;</code>
+     *
      * The above will output the following:
      * <pre> Sun, 31 Dec 2000 15:00:00 +0000
      * Sun, 31 Dec 2000 15:00:00 +0000
      * Sun, 31 Dec 2000 17:00:00 +0200</pre>
+     *
      * The third date is the same, but the timezone is set to local instead of
      * UTC. The array form of date may seem cumbersome at first, but consider
      * the following code:
@@ -175,19 +163,17 @@ class AeDate extends AeObject
      *
      * echo $d1->getValue() === $d2->getValue() ? 'equal' : 'not equal'; // equal</code>
      *
-     * @param AeArray|AeString|AeFloat|AeInteger|array|string|float|int $value
+     * You can also pass null to set the date to current date and time.
      *
-     * @return bool
+     * @throws AeDateException #400 on invalid value
+     *
+     * @param array|string|float|int $value
+     *
+     * @return AeDate self
      */
     public function setValue($value = null)
     {
-        // *** Convert AeInteger, AeString and AeFloat to scalar values
-        if ($value instanceof AeScalar) {
-            $value = $value->getValue();
-        }
-
-        // *** Convert AeArray to array
-        if ($value instanceof AeArray) {
+        if ($value instanceof AeType) {
             $value = $value->getValue();
         }
 
@@ -198,7 +184,7 @@ class AeDate extends AeObject
 
         // *** Illegal value type
         if (!is_array($value) && !is_string($value) && !is_int($value) && !is_float($value)) {
-            return false;
+            throw new AeDateException('Invalid value passed: expecting scalar, ' . AeType::of($value) . ' given', 400);
         }
 
         // *** Convert a numeric string into a number
@@ -249,14 +235,16 @@ class AeDate extends AeObject
             $this->_value = date_create($value)->format('Y-m-d H:i:s e');
         }
 
-        return true;
+        return $this;
     }
 
     /**
      * Get date value
      *
-     * Return the date value. The value is returned in the following format:
-     * YYYY-MM-DD HH-MM-SS ZZZZ
+     * Return the date value. The value is returned in the RFC 2822 format. You
+     * can specify another format using an optional <var>$format</var>
+     * parameter. It uses the same formatting as PHP's {@link http://php.net/date
+     * date()} function.
      *
      * @param string $format the format string, accepted by {@link date() date()}
      *                       PHP function
@@ -273,7 +261,7 @@ class AeDate extends AeObject
      *
      * Adds a time interval to the date and returns the new date object
      *
-     * @param AeDate_Interval|AeArray|AeString|array|string $interval
+     * @param AeDate_Interval|array|string $interval
      *
      * @return AeDate
      */
@@ -333,7 +321,7 @@ class AeDate extends AeObject
      *
      * Subtracts a time interval from the date and returns the new date object
      *
-     * @param AeDate_Interval|AeArray|AeString|array|string $interval
+     * @param AeDate_Interval|array|string $interval
      * 
      * @return AeDate
      */
@@ -400,13 +388,12 @@ class AeDate extends AeObject
      *
      * If you specify the second optional <var>$operator</var> argument, you can
      * test for a particular relationship. The possible operators are: <, lt,
-     * <=, le, >, gt, >=, ge, ==, =, eq, !=, <>, ne respectively. This parameter
-     * is case-sensitive, so values should be lowercase. When using the
+     * <=, le, >, gt, >=, ge, ==, =, eq, !=, <>, ne respectively. When using the
      * <var>$operator</var> argument, this method returns TRUE if the
      * relationship is the one specified by the operator, FALSE otherwise.
      *
-     * @param AeDate|AeArray|AeString|AeFloat|AeInteger|array|string|float|integer $value
-     * @param AeString|string                                                      $operator
+     * @param AeDate|array|string|float|integer $value
+     * @param string                            $operator
      *
      * @return int|bool
      */
@@ -417,7 +404,6 @@ class AeDate extends AeObject
         }
 
         $zone  = new AeDate_Timezone('UTC');
-
         $date1 = $this->setTimezone($zone)->getValue('Y.m.d.H.i.s');
         $date2 = $value->setTimezone($zone)->getValue('Y.m.d.H.i.s');
 
@@ -426,6 +412,8 @@ class AeDate extends AeObject
             if ($operator instanceof AeString) {
                 $operator = $operator->getValue();
             }
+
+            $operator = strtolower($operator);
 
             return version_compare($date1, $date2, $operator);
         }
@@ -442,7 +430,7 @@ class AeDate extends AeObject
      * that an interval is always positive. Use the {@link AeDate::compare()
      * compare()} method to detect the smaller of two date values
      *
-     * @param AeDate|AeArray|AeString|AeFloat|AeInteger|array|string|float|integer $value
+     * @param AeDate|array|string|float|integer $value
      *
      * @return AeDate_Interval
      */
@@ -562,7 +550,7 @@ class AeDate extends AeObject
      * See {@link AeDate_Timezone::setValue()} method for a detailed overview of
      * accepted values
      *
-     * @param AeDate_Timezone|AeString|string $value
+     * @param AeDate_Timezone|string $value
      *
      * @return AeDate
      */
@@ -584,16 +572,10 @@ class AeDate extends AeObject
      *
      * Returns current date value wrapped in {@link AeDate} class instance
      *
-     * @throws AeDateException #503 if the PHP version is less that 5.2.0
-     *
      * @return AeDate
      */
     public static function now()
     {
-        if (!version_compare(PHP_VERSION, '5.2.0', '>=')) {
-            throw new AeDateException('The AeDate class requires PHP version 5.2.0 or later', 503);
-        }
-
         return new AeDate(time());
     }
 
@@ -604,18 +586,12 @@ class AeDate extends AeObject
      * interval value. See {@link AeDate_Interval::__construct()} for details on
      * accepted argument values.
      *
-     * @throws AeDateException #503 if the PHP version is less that 5.2.0
-     *
-     * @param AeString|AeArray|string|array $value
+     * @param string|array $value
      *
      * @return AeDate_Interval
      */
     public static function interval($value)
     {
-        if (!version_compare(PHP_VERSION, '5.2.0', '>=')) {
-            throw new AeDateException('The AeDate class requires PHP version 5.2.0 or later', 503);
-        }
-
         return new AeDate_Interval($value);
     }
 
@@ -626,18 +602,12 @@ class AeDate extends AeObject
      * timezone value. See {@link AeDate_Timezone::__construct()} for details on
      * accepted argument values.
      *
-     * @throws AeDateException #503 if the PHP version is less that 5.2.0
-     *
-     * @param AeString|string $value
+     * @param string $value
      *
      * @return AeDate_Timezone
      */
     public static function timezone($value)
     {
-        if (!version_compare(PHP_VERSION, '5.2.0', '>=')) {
-            throw new AeDateException('The AeDate class requires PHP version 5.2.0 or later', 503);
-        }
-
         return new AeDate_Timezone($value);
     }
 
@@ -646,8 +616,8 @@ class AeDate extends AeObject
      *
      * Return a string value wrapped in {@link AeString} class instance
      * 
-     * @param string $format the format string, accepted by {@link date() date()}
-     *                       PHP function
+     * @param string $format the format string, accepted by the {@link
+     *                       http://php.net/date() date()} PHP function
      *
      * @return AeString
      */
@@ -751,7 +721,7 @@ class AeDate extends AeObject
  * @package AnEngine
  * @todo add subpackage once custom documentor is done //Exception
  */
-class AeDateException extends AeObjectException
+class AeDateException extends AeException
 {
     /**
      * @param string $message

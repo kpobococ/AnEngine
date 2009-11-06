@@ -230,7 +230,7 @@ class AeCallback extends AeObject
  * @package AnEngine
  * @todo add subpackage once custom documentor is done //Exception
  */
-class AeCallbackException extends AeObjectException
+class AeCallbackException extends AeException
 {
     /**
      * @param string $message

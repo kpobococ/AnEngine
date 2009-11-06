@@ -74,6 +74,8 @@ abstract class AeCore
      *
      * Also calls {@link AeAutoload::detect()} instantly for any custom autoload
      * handlers.
+     *
+     * @throws AeException #505 if PHP version is less than 5.2.0
      */
     public static function load()
     {
@@ -87,10 +89,10 @@ abstract class AeCore
         set_include_path(realpath(dirname(__FILE__) . SLASH . '..') . PATH_SEPARATOR .
                          get_include_path());
 
-        if (!version_compare(PHP_VERSION, '5.1.2', '>=')) {
+        if (!version_compare(PHP_VERSION, '5.2.0', '>=')) {
             // *** Explicitly include exception file
             include_once dirname(__FILE__) . SLASH . 'classes' . SLASH . 'exception.class.php';
-            throw new AeException('AnEngine framework requires PHP version 5.1.2 or later', 503);
+            throw new AeException('AnEngine framework requires PHP version 5.2.0 or later', 505);
         }
 
         include_once 'ae' . SLASH . 'autoload.class.php';

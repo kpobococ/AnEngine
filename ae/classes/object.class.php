@@ -40,11 +40,9 @@ abstract class AeObject
 {
     /**
      * Object event handlers
-     * @todo consider moving to private area, since only AeObject methods use
-     *       this directly (except AeEvent::copy())
      * @var array
      */
-    protected $___events;
+    private $___events;
 
     /**
      * Generic property getter
@@ -527,8 +525,14 @@ abstract class AeObject
     /**
      * Add event listener
      *
-     * @param string     $name     event name
-     * @param AeCallback $listener event handling function
+     * Registers an event listener for the event, identified by <var>$name</var>,
+     * using <var>$listener</var> as the listener callback:
+     * <code> $myObj->addEvent('foo', 'onFoo');</code>
+     *
+     * @throws AeObjectException #400 on invalid name
+     *
+     * @param string                    $name     event name, case insensitive
+     * @param AeEvent_Listener|callback $listener event handling function
      *
      * @return AeEvent_Listener
      */
@@ -540,16 +544,34 @@ abstract class AeObject
             throw new AeObjectException('Invalid name type: expecting string, ' . $type . ' given', 400);
         }
 
-        return AeEvent::add($name, $listener, $this);
+        $name     = strtolower((string) $name);
+        $listener = AeEvent::listener($listener);
+
+        if (!is_array($this->___events)) {
+            $this->___events = array();
+        }
+
+        if (!isset($this->___events[$name]) || !is_array($this->___events[$name])) {
+            $this->___events[$name] = array();
+        }
+
+        $this->___events[$name][] = $listener;
+
+        return $listener;
     }
 
     /**
      * Remove event listener
      *
+     * Unregisteres an event listener for the event, identified by <var>$name</var>,
+     * using <var>$listener</var> to identify the actual function to remove.
+     *
+     * @throws AeObjectException #400 on invalid name
+     *
      * @param string           $name
      * @param AeEvent_Listener $listener
      *
-     * @return AeEvent_Listener
+     * @return AeObject self
      */
     public function removeEvent($name, AeEvent_Listener $listener)
     {
@@ -559,7 +581,28 @@ abstract class AeObject
             throw new AeObjectException('Invalid name type: expecting string, ' . $type . ' given', 400);
         }
 
-        return AeEvent::remove($name, $listener, $this);
+        if (!is_array($this->___events)) {
+            return $this;
+        }
+
+        $name = strtolower((string) $name);
+
+        if (!isset($this->___events[$name]) || !is_array($this->___events[$name])) {
+            return $this;
+        }
+
+        $events = $this->___events[$name];
+
+        foreach ($events as $i => $l)
+        {
+            if ($listener === $l) {
+                unset($events[$i]);
+                $this->___events[$name] = array_values($events);
+                break;
+            }
+        }
+
+        return $this;
     }
 
     /**
@@ -567,9 +610,11 @@ abstract class AeObject
      *
      * Allows to add several event listeners to different events:
      * <code> $listeners = $myObj->addEvents(array(
-     *     'foo' => new AeCallback('Handler, 'onFoo'),
-     *     'bar' => new AeCallback('Handler, 'onBar')
+     *     'foo' => new AeCallback('Handler', 'onFoo'),
+     *     'bar' => new AeCallback('Handler', 'onBar')
      * ));</code>
+     *
+     * @throws AeObjectException #400 on invalid events type
      *
      * @param array $events
      *
@@ -583,7 +628,13 @@ abstract class AeObject
             throw new AeObjectException('Invalid events type: expecting array, ' . $type . ' given', 400);
         }
 
-        return AeEvent::add($events, null, $this);
+        $return = array();
+
+        foreach ($events as $name => $listener) {
+            $return[$name] = $this->addEvent($name, $listener);
+        }
+
+        return $return;
     }
 
     /**
@@ -598,6 +649,8 @@ abstract class AeObject
      * You can also remove all event listeners for a certain event:
      * <code> $myObj->removeEvents('foo');</code>
      *
+     * @throws AeObjectException #400 on invalid events type
+     *
      * @param array|string $events
      *
      * @return array an array of removed AeEvent_Listener objects
@@ -606,24 +659,30 @@ abstract class AeObject
     {
         $type = AeType::of($name);
 
-        if ($type == 'string')
-        {
-            if (!is_array($this->___events)) {
-                return array();
-            }
-
-            $return = array();
-
-            foreach ($this->___events as $name) {
-                $return[$name] = AeEvent::remove($name, null, $this);
-            }
-
-            return $return;
-        } else if ($type != 'array') {
+        if ($type != 'array' && $type != 'string') {
             throw new AeObjectException('Invalid events type: expecting array or string, ' . $type . ' given', 400);
         }
 
-        return AeEvent::remove($events, null, $this);
+        if ($type == 'string')
+        {
+            $name = strtolower((string) $events);
+
+            if (!is_array($this->___events)) {
+                return $this;
+            }
+
+            if (isset($this->___events[$name]) && is_array($this->___events[$name])) {
+                $this->___events[$name] = array();
+            }
+
+            return $this;
+        }
+
+        foreach ($events as $name => $listener) {
+            $this->removeEvent($name, $listener);
+        }
+
+        return $this;
     }
 
     /**
@@ -639,24 +698,72 @@ abstract class AeObject
      *     var_dump($foo, $bar, $baz);
      * }</code>
      *
+     * The second parameter may also be a single variable instead of an array,
+     * if you only want to pass one parameter to the event handler:
+     * <code> $myObj->fireEvent('foo', 'bar');</code>
+     *
      * This method returns false, if an event listener requested to stop the
      * default event action (see {@link AeEvent::preventDefault()}), true
      * otherwise. Note, that not all classes support the preventDefault action.
      *
-     * @param string $name event name
-     * @param array  $args event parameters
+     * @throws AeObjectException #400 on invalid name
+     *
+     * @param string       $name event name
+     * @param mixed|array  $args event parameters
      *
      * @return bool
      */
-    public function fireEvent($name, $args = null)
+    public function fireEvent($name, $args = array())
     {
-        return AeEvent::fire($name, $args, $this);
+        $type = AeType::of($name);
+
+        if ($type != 'string') {
+            throw new AeObjectException('Invalid name type: expecting string, ' . $type . ' given', 400);
+        }
+
+        if (!is_array($this->___events)) {
+            return true;
+        }
+
+        $name = strtolower((string) $name);
+
+        if (!isset($this->___events[$name]) || !is_array($this->___events[$name])) {
+            return true;
+        }
+
+        $events = $this->___events[$name];
+
+        if (count($events) > 0)
+        {
+            $event = new AeEvent($name, $this);
+
+            if (!is_array($args)) {
+                $args = array($event, $args);
+            } else {
+                array_unshift($args, $event);
+            }
+
+            foreach ($events as $listener)
+            {
+                $listener->call($args);
+
+                if ($event->getStopPropagation()) {
+                    break;
+                }
+            }
+
+            if ($event->getPreventDefault()) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
      * Clone events
      *
-     * Copies all event from <var>$from</var> object to the current one. If an
+     * Copies all events from <var>$from</var> object to current object. If an
      * optional <var>$name</var> parameter is specified and is a string, only
      * event listeners for that event are copied.
      *
@@ -688,7 +795,7 @@ abstract class AeObject
      * @param AeObject $from
      * @param string   $name
      *
-     * @return array an array of all the event listeners
+     * @return AeObject self
      */
     public function cloneEvents(AeObject $from, $name = null)
     {
