@@ -529,10 +529,15 @@ abstract class AeObject
      * using <var>$listener</var> as the listener callback:
      * <code> $myObj->addEvent('foo', 'onFoo');</code>
      *
+     * <b>NOTE:</b> if an event handler returns false, {@link AeEvent::stop()}
+     * is called on current event, effectively cancelling event.
+     *
      * @throws AeObjectException #400 on invalid name
      *
+     * @see AeObject::addEvents(), AeObject::removeEvent()
+     *
      * @param string                    $name     event name, case insensitive
-     * @param AeEvent_Listener|callback $listener event handling function
+     * @param AeEvent_Listener|callback $listener event handler
      *
      * @return AeEvent_Listener
      */
@@ -568,6 +573,8 @@ abstract class AeObject
      *
      * @throws AeObjectException #400 on invalid name
      *
+     * @see AeObject::removeEvents(), AeObject::addEvent()
+     *
      * @param string           $name
      * @param AeEvent_Listener $listener
      *
@@ -581,24 +588,22 @@ abstract class AeObject
             throw new AeObjectException('Invalid name type: expecting string, ' . $type . ' given', 400);
         }
 
-        if (!is_array($this->___events)) {
-            return $this;
-        }
-
-        $name = strtolower((string) $name);
-
-        if (!isset($this->___events[$name]) || !is_array($this->___events[$name])) {
-            return $this;
-        }
-
-        $events = $this->___events[$name];
-
-        foreach ($events as $i => $l)
+        if (is_array($this->___events))
         {
-            if ($listener === $l) {
-                unset($events[$i]);
-                $this->___events[$name] = array_values($events);
-                break;
+            $name = strtolower((string) $name);
+
+            if (isset($this->___events[$name]) && is_array($this->___events[$name]))
+            {
+                $events = $this->___events[$name];
+
+                foreach ($events as $i => $l)
+                {
+                    if ($listener === $l) {
+                        unset($events[$i]);
+                        $this->___events[$name] = array_values($events);
+                        break;
+                    }
+                }
             }
         }
 
@@ -615,6 +620,8 @@ abstract class AeObject
      * ));</code>
      *
      * @throws AeObjectException #400 on invalid events type
+     *
+     * @see AeObject::addEvent(), AeObject::removeEvents(), AeObject::cloneEvents()
      *
      * @param array $events
      *
@@ -651,9 +658,11 @@ abstract class AeObject
      *
      * @throws AeObjectException #400 on invalid events type
      *
+     * @see AeObject::removeEvent(), AeObject::addEvents(), AeObject::cloneEvents()
+     *
      * @param array|string $events
      *
-     * @return array an array of removed AeEvent_Listener objects
+     * @return AeObject self
      */
     public function removeEvents($events)
     {
@@ -665,21 +674,18 @@ abstract class AeObject
 
         if ($type == 'string')
         {
-            $name = strtolower((string) $events);
+            if (is_array($this->___events))
+            {
+                $name = strtolower((string) $events);
 
-            if (!is_array($this->___events)) {
-                return $this;
+                if (isset($this->___events[$name]) && is_array($this->___events[$name])) {
+                    $this->___events[$name] = array();
+                }
             }
-
-            if (isset($this->___events[$name]) && is_array($this->___events[$name])) {
-                $this->___events[$name] = array();
+        } else {
+            foreach ($events as $name => $listener) {
+                $this->removeEvent($name, $listener);
             }
-
-            return $this;
-        }
-
-        foreach ($events as $name => $listener) {
-            $this->removeEvent($name, $listener);
         }
 
         return $this;
@@ -721,39 +727,37 @@ abstract class AeObject
             throw new AeObjectException('Invalid name type: expecting string, ' . $type . ' given', 400);
         }
 
-        if (!is_array($this->___events)) {
-            return true;
-        }
-
-        $name = strtolower((string) $name);
-
-        if (!isset($this->___events[$name]) || !is_array($this->___events[$name])) {
-            return true;
-        }
-
-        $events = $this->___events[$name];
-
-        if (count($events) > 0)
+        if (is_array($this->___events))
         {
-            $event = new AeEvent($name, $this);
+            $name = strtolower((string) $name);
 
-            if (!is_array($args)) {
-                $args = array($event, $args);
-            } else {
-                array_unshift($args, $event);
-            }
-
-            foreach ($events as $listener)
+            if (isset($this->___events[$name]) && is_array($this->___events[$name]))
             {
-                $listener->call($args);
+                $events = $this->___events[$name];
 
-                if ($event->getStopPropagation()) {
-                    break;
+                if (count($events) > 0)
+                {
+                    $event = new AeEvent($name, $this);
+
+                    if (!is_array($args)) {
+                        $args = array($event, $args);
+                    } else {
+                        array_unshift($args, $event);
+                    }
+
+                    foreach ($events as $listener)
+                    {
+                        $listener->call($args);
+
+                        if ($event->_getStopPropagation()) {
+                            break;
+                        }
+                    }
+
+                    if ($event->_getPreventDefault()) {
+                        return false;
+                    }
                 }
-            }
-
-            if ($event->getPreventDefault()) {
-                return false;
             }
         }
 
@@ -771,26 +775,7 @@ abstract class AeObject
      * directly to several objects, so modifying a listener will affect all
      * objects, to which it was assigned.
      *
-     * This method returns different array structures depending on the value of
-     * <var>$name</var> parameter:
-     * <code> print_r($myObj->cloneEvents($myOtherObj));
-     * print_r($myObj->cloneEvents($myOtherObj, 'foo'));</code>
-     *
-     * The code above will result in something like this:
-     * <pre> Array(
-     *     'foo' => Array(
-     *         0 => AeEvent_Listener,
-     *         1 => AeEvent_Listener
-     *     ),
-     *     'bar' => Array(
-     *         0 => AeEvent_Listener
-     *     )
-     * )
-     *
-     * Array(
-     *     0 => AeEvent_Listener,
-     *     1 => AeEvent_Listener
-     * )</pre>
+     * @see AeObject::addEvents(), AeObject::removeEvents()
      *
      * @param AeObject $from
      * @param string   $name
@@ -799,7 +784,21 @@ abstract class AeObject
      */
     public function cloneEvents(AeObject $from, $name = null)
     {
-        return AeEvent::copy($from, $this, $name);
+        if (is_array($from->___events))
+        {
+            if ($name !== null)
+            {
+                $name = strtolower((string) $name);
+
+                if (isset($from->___events[$name]) && is_array($from->___events[$name])) {
+                    $this->___events[$name] = $from->___events[$name];
+                }
+            } else {
+                $this->___events = $from->___events;
+            }
+        }
+
+        return $this;
     }
 }
 

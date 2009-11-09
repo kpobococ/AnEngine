@@ -42,13 +42,13 @@ class AeEvent extends AeObject
      * Stop propagation flag
      * @var bool
      */
-    private $_stopPropagation = false;
+    private $___stopPropagation = false;
 
     /**
      * Prevent default flag
      * @var bool
      */
-    private $_preventDefault  = false;
+    private $___preventDefault  = false;
 
     /**
      * Event constructor
@@ -66,23 +66,35 @@ class AeEvent extends AeObject
      * Prevent default action
      *
      * If this method is called on the event inside the event listener method,
-     * and the target object supports it, the default event action on that
-     * object will not occur
+     * and the target object's class supports it, the default event action on
+     * that object will not occur.
+     *
+     * @see AeEvent::stopPropagation(), AeEvent::stop()
+     *
+     * @return AeEvent self
      */
     public function preventDefault()
     {
-        $this->_preventDefault = true;
+        $this->___preventDefault = true;
+
+        return $this;
     }
 
     /**
      * Stop subsequent events
      *
-     * If this method is called on the event inside the event listener method,
-     * any subsequent event listeners will not be run
+     * If this method is called on the event inside the event handler, any
+     * remaining event handlers in target's event listener queue will not be run.
+     *
+     * @see AeEvent::preventDefault(), AeEvent::stop()
+     *
+     * @return AeEvent self
      */
     public function stopPropagation()
     {
-        $this->_stopPropagation = true;
+        $this->___stopPropagation = true;
+
+        return $this;
     }
 
     /**
@@ -90,21 +102,52 @@ class AeEvent extends AeObject
      *
      * This method is a shortcut for both {@link AeEvent::preventDefault()} and
      * {@link AeEvent::stopPropagation()} methods
+     *
+     * @uses AeEvent::preventDefault() to prevent default action
+     * @uses AeEvent::stopPropagation() to stop event propagation
+     *
+     * @return AeEvent self
      */
     public function stop()
     {
-        $this->preventDefault();
-        $this->stopPropagation();
+        return $this->preventDefault()->stopPropagation();
     }
 
-    public function getPreventDefault()
+    /**
+     * Get prevent default
+     *
+     * Returns true if the prevent default action flag has been set, false
+     * otherwise. If the prevent default action flag is set, the {@link
+     * AeObject::fireEvent()} method will return false. If there was any default
+     * action defined for the event, it will be cancelled.
+     *
+     * <b>NOTE:</b> utilization of this flag depends solely on class developer
+     *
+     * @see AeEvent::_getStopPropagation()
+     *
+     * @return bool
+     */
+    protected function _getPreventDefault()
     {
-        return $this->_preventDefault;
+        return $this->___preventDefault;
     }
 
-    public function getStopPropagation()
+    /**
+     * Get stop propagation
+     *
+     * Returns true if the stop event propagation flag has been set, false
+     * otherwise. If the stop event propagation action flag is set, any
+     * remaining event handlers in event target's listener queue will not be
+     * called. Utilization of this flag is implemented by {@link
+     * AeObject::fireEvent()} method.
+     *
+     * @see AeEvent::_getPreventDefault()
+     *
+     * @return bool
+     */
+    protected function _getStopPropagation()
     {
-        return $this->_stopPropagation;
+        return $this->___stopPropagation;
     }
 
     /**
@@ -125,185 +168,6 @@ class AeEvent extends AeObject
         }
 
         return new AeEvent_Listener($callback);
-    }
-
-    /**
-     * Fire event
-     *
-     * Triggers an event, identified by <var>$name</var>, using <var>$args</var>
-     * as parameters for the event listener method. The third parameter defines
-     * that the event should be fired for a certain object instead of it being
-     * fired globally.
-     *
-     * The <var>$args</var> parameter can be a single parameter or an array of
-     * parameters. If you want to pass an array as a single parameter, you can
-     * either wrap it inside another array, or inside an instance of {@link AeArray}
-     * class.
-     *
-     * This method returns a boolean value, indicating a prevent default flag
-     * state: true, if flag was not set, false otherwise. The usage of this
-     * return value depends solely on your application's architecture and your
-     * choice
-     *
-     * @see AeObject::fireEvent()
-     *
-     * @param string   $name
-     * @param mixed    $args
-     * @param AeObject $target
-     *
-     * @return bool
-     */
-    public static function fire($name, $args = null, AeObject $target = null)
-    {
-        $type = AeType::of($name);
-
-        if ($type != 'string') {
-            throw new AeEventException('Invalid name type: expecting string, ' . $type . ' given', 400);
-        }
-
-        $name   = self::_getName($name);
-        $events = self::_getEvents($name, $target);
-
-        if (count($events) > 0)
-        {
-            $event = new AeEvent($name, $target);
-            $args  = self::_getArgs($event, $args);
-
-            foreach ($events as $listener)
-            {
-                $listener->call($args);
-
-                if ($event->_stopPropagation) {
-                    break;
-                }
-            }
-
-            if ($event->_preventDefault) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    /**
-     * Copy events
-     *
-     * Copies all events from one object to another. If the optional <var>$name</var>
-     * parameter is set, only events, identified by that name, will be copied.
-     * Otherwise, all the events will be copied.
-     *
-     * <b>NOTE:</b> If the target object has any events of its own, they will be
-     * overwritten. If the optional <var>$name</var> parameter is not set, all
-     * the events will be overwritten
-     *
-     * @param AeObject $from
-     * @param AeObject $to
-     * @param string   $name
-     *
-     * @return array an array of copied events
-     */
-    public static function copy(AeObject $from, AeObject $to, $name = null)
-    {
-        if ($name === null)
-        {
-            $events        = $from->___events;
-            $to->___events = $events;
-
-            return $events;
-        }
-
-        $name   = self::_getName($name);
-        $events = self::_getEvents($name, $from);
-
-        $to->___events[$name] = $events;
-
-        return $events;
-    }
-
-    /**
-     * Get clean name
-     *
-     * @param string $name
-     *
-     * @return string a cleaned version of event name
-     */
-    protected static function _getName($name)
-    {
-        return strtolower((string) $name);
-    }
-
-    /**
-     * Get parameters
-     *
-     * Returns an array of listener callback method parameters, including event
-     * object
-     *
-     * @param AeEvent $event
-     * @param mixed   $args
-     *
-     * @return array
-     */
-    protected static function _getArgs(AeEvent $event, $args = null)
-    {
-        if ($args === null) {
-            return array($event);
-        }
-
-        if (!is_array($args)) {
-            return array($event, $args);
-        }
-
-        array_unshift($args, $event);
-
-        return $args;
-    }
-
-    /**
-     * Check event name
-     *
-     * @param string   $name
-     * @param AeObject $target 
-     */
-    protected static function _checkEvents($name, AeObject $target = null)
-    {
-        if ($target !== null)
-        {
-            if (!is_array($target->___events)) {
-                $target->___events = array();
-            }
-
-            if (!isset($target->___events[$name]) || !is_array($target->___events[$name])) {
-                $target->___events[$name] = array();
-            }
-        } else {
-            if (!is_array(self::$_events)) {
-                self::$_events = array();
-            }
-
-            if (!isset(self::$_events[$name]) || !is_array(self::$_events[$name])) {
-                self::$_events[$name] = array();
-            }
-        }
-    }
-
-    /**
-     * Get events
-     *
-     * @param string   $name
-     * @param AeObject $target
-     *
-     * @return array
-     */
-    protected static function _getEvents($name, AeObject $target = null)
-    {
-        self::_checkEvents($name, $target);
-
-        if ($target !== null) {
-            return $target->___events[$name];
-        }
-
-        return self::$_events[$name];
     }
 }
 

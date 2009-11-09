@@ -30,7 +30,8 @@ class AeEvent_Listener extends AeCallback
      * Constructor
      *
      * The accepted parameters are the same here as in the {@link AeCallback}
-     * class constructor, except that it also accepts instances of {@link AeCallback}
+     * class constructor, except that it also accepts instances of {@link
+     * AeCallback}
      *
      * @param AeCallback|object|array|string $callback
      * @param string                         $method
@@ -60,7 +61,7 @@ class AeEvent_Listener extends AeCallback
      * @param array|string $args an array of parameters
      * @param array        $ma
      *
-     * @return bool|mixed
+     * @return mixed
      */
     public function call($args, $ma = array())
     {
@@ -68,14 +69,11 @@ class AeEvent_Listener extends AeCallback
             return parent::call($args, $ma);
         }
 
-        $return = parent::call($args);
-
-        if ($return === false) {
-            $event = $args[0];
-            $event->stop();
+        if (parent::call($args) === false) {
+            $args[0]->stop();
         }
 
-        return true;
+        return $this;
     }
 }
 

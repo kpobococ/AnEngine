@@ -517,11 +517,15 @@ class AeDate extends AeObject
     {
         $zone = new AeDate_Timezone;
 
-        if (!$zone->setValue($this->getValue('e')))
-        {
+        try {
+            $zone->setValue($this->getValue('e'));
+        } catch (AeDateTimezoneException $e) {
+            if ($e->getCode() !== 413) {
+                throw $e;
+            }
+
             $dst    = (bool) $this->getValue('I');
             $offset = (int) $this->getValue('Z');
-
             $abbrs  = timezone_abbreviations_list();
 
             foreach ($abbrs as $abbr => $data)
@@ -560,9 +564,16 @@ class AeDate extends AeObject
             $value = new AeDate_Timezone($value);
         }
 
+        $zone = $value->getValue();
+
+        if (strpos($zone, ' ') !== false) {
+            $zone = str_replace(' ', '_', $zone);
+        }
+
+        $zone = @timezone_open($zone);
         $date = new DateTime($this->getValue());
 
-        $date->setTimezone(@timezone_open($value->getValue()));
+        $date->setTimezone($zone);
 
         return new AeDate($date->format(self::W3C));
     }

@@ -36,18 +36,14 @@ class AeDate_Interval extends AeObject
      *
      * If no value is passed, a zero interval is created.
      *
-     * See the {@link AeDate_Interval::setValue() setValue()} method
-     * documentation for more details on accepted values
+     * @see AeDate_Interval::setValue()
      *
-     * @throws AeDateException #503 if the PHP version is less that 5.2.0
-     * @throws AeDateIntervalException #400 if invalid interval value is passed
-     *
-     * @param AeArray|AeString|array|string $value
+     * @param array|string $value
      */
     public function __construct($value = 0)
     {
-        if (!is_null($value) && !$this->setValue($value)) {
-            throw new AeDateIntervalException('Invalid interval value passed', 400);
+        if (!is_null($value)) {
+            $this->setValue($value);
         }
     }
 
@@ -98,44 +94,46 @@ class AeDate_Interval extends AeObject
      * $foo = new AeDate_Interval('P30DT72H');
      * echo $foo; // outputs 'P33D': 33 days</code>
      *
-     * @param AeArray|AeString|array|string $value
+     * @throws AeDateIntervalException #400 on invalid value
      *
-     * @return bool
+     * @param array|string $value
+     *
+     * @return AeDate_Interval self
      */
     public function setValue($value)
     {
-        if ($value instanceof AeScalar || $value instanceof AeArray) {
+        if ($value instanceof AeType) {
             $value = $value->getValue();
         }
 
         if ((is_numeric($value) && $value == 0) || (is_array($value) && empty($value))) {
             // *** All values are zero
-            $this->_value = array(0 => 0, 1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0);
+            $this->_value = array(0, 0, 0, 0, 0, 0);
 
-            return true;
+            return $this;
         }
 
         // *** Check DateInterval format
         if (is_string($value))
         {
-            if (!preg_match('#^(P((\d+)Y)?((\d+)M)?((\d+)D)?)?(T((\d+)H)?((\d+)M)?((\d+)S)?)?$#', $value, $matches)) {
-                return false;
+            if (!preg_match('#^(?:P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)D)?)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$#', $value, $matches)) {
+                throw new AeDateIntervalException('Invalid interval value: string value must match DateInterval format', 400);
             }
 
-            if (!isset($matches[1]) && !isset($matches[8])) {
-                return false;
+            if (count($matches) == 1) {
+                return $this;
             }
 
             $this->_value = $this->_simplify(array(
-                0 => (int) @$matches[3],
-                1 => (int) @$matches[5],
-                2 => (int) @$matches[7],
-                3 => (int) @$matches[10],
-                4 => (int) @$matches[12],
-                5 => (int) @$matches[14]
+                0 => (int) @$matches[1],
+                1 => (int) @$matches[2],
+                2 => (int) @$matches[3],
+                3 => (int) @$matches[4],
+                4 => (int) @$matches[5],
+                5 => (int) @$matches[6]
             ));
 
-            return true;
+            return $this;
         }
 
         if (is_array($value))
@@ -149,10 +147,10 @@ class AeDate_Interval extends AeObject
                 5 => (int) @$value['seconds']
             ));
 
-            return true;
+            return $this;
         }
 
-        return false;
+        throw new AeDateIntervalException('Invalid interval value: expecting string or array, ' . AeType::of($value) . ' given', 400);
     }
 
     /**
