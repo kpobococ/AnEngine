@@ -125,7 +125,8 @@ abstract class AeFile_Driver extends AeObject implements AeInterface_File
             return $this->_size;
         }
 
-        $suffix = array('b', 'kb', 'Mb', 'Gb', 'Tb', 'Pb', 'Eb', 'Zb', 'Yb');
+        // *** I doubt that values higher than GiB will occur, but let it stay
+        $suffix = array('B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB', 'YiB');
         $e      = floor(log($this->_size, 1024));
         $return = round($this->_size / pow(1024, $e), 2);
 
