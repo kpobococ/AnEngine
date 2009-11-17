@@ -21,7 +21,7 @@
  *     'icon'    => 'path/to/favicon.ico'
  * ));
  *
- * echo $document->getDocumentType() .
+ * echo $document->getType() .
  * '&lt;html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
  *     ' . $document->getHead(8);</code>
  *
@@ -131,7 +131,7 @@ class AeDocument extends AeObject
      * Document type
      * @var array
      */
-    protected $_documentType = self::TYPE_XHTML_10_STRICT;
+    protected $_type = self::TYPE_XHTML_10_STRICT;
 
     /**
      * Constructor
@@ -144,11 +144,11 @@ class AeDocument extends AeObject
      *
      * You can also set several most commonly used options using class
      * constructor. The available options are:
-     * - doctype:      document type. Default: XHTML 1.0 Strict
+     * - type:         document type. Default: XHTML 1.0 Strict
      * - content-type: document content type. Default: text/html
      * - icon:         document favicon path. Default: browser default
      *
-     * @uses AeDocument::setDocumentType()
+     * @uses AeDocument::setType()
      * @uses AeDocument::setContentType()
      * @uses AeDocument::setIcon()
      *
@@ -172,10 +172,10 @@ class AeDocument extends AeObject
         if (is_array($options))
         {
             // *** Add document type
-            if (isset($options['doctype'])) {
-                $this->setDocumentType($options['doctype']);
-            } else if (!is_array($this->_documentType)) {
-                $this->setDocumentType($this->_documentType);
+            if (isset($options['type'])) {
+                $this->setType($options['type']);
+            } else if (!is_array($this->_type)) {
+                $this->setType($this->_type);
             }
 
             // *** Add content type
@@ -250,6 +250,31 @@ class AeDocument extends AeObject
         return $this;
     }
 
+    /**
+     * Add head tag
+     *
+     * Adds a tag to the document head element, using arguments as tag options.
+     * If an optional <var>$ie</var> parameter is passed and is an integer, the
+     * tag is added with conditional comments for that version of ie. The
+     * following example only adds the tag for ie6:
+     * <code> $document->addTag('style', 'b{color:#00f;}', array(), 6);</code>
+     *
+     * Note, in the example above we add a style tag explicitly, but you should
+     * use {@link AeDocument::addStyle() addStyle()} method instead.
+     *
+     * You can also use the <var>$ie</var> argument to specify more complex
+     * conditions. The following code only adds the tag for ie 7 or below:
+     * <code> $document->addTag('style', 'b{color:#00f;}', array(), 'lt 7');</code>
+     *
+     * @todo prevent adding tags with exactly the same attributes
+     *
+     * @param string     $name  tag name
+     * @param string     $value tag value
+     * @param array      $attrs an associative array of tag attributes
+     * @param int|string $ie    IE version or condition
+     *
+     * @return AeDocument self
+     */
     public function addTag($name, $value = null, $attrs = array(), $ie = null)
     {
         if ($value instanceof AeType) {
@@ -262,7 +287,7 @@ class AeDocument extends AeObject
 
         $tag = array(
             'name'  => (string) $name,
-            'value' => $value,
+            'value' => (string) $value,
             'attrs' => $attrs
         );
 
@@ -275,6 +300,24 @@ class AeDocument extends AeObject
         return $this;
     }
 
+    /**
+     * Add meta tag
+     *
+     * Adds a meta tag to the document head element, using arguments as tag
+     * options:
+     * <code> $document->addMeta('revisit-after', array(
+     *     'content' => '14 days'
+     * ));</code>
+     *
+     * @uses AeDocument::addTag()
+     *
+     * @todo overwrite existing tags with the same name, if present
+     *
+     * @param string $name  meta tag name attribute
+     * @param array  $attrs additional meta tag attributes
+     *
+     * @return AeDocument self
+     */
     public function addMeta($name, $attrs = array())
     {
         if ($attrs instanceof AeArray) {
@@ -288,6 +331,24 @@ class AeDocument extends AeObject
         return $this->addTag('meta', null, $attrs);
     }
 
+    /**
+     * Add link tag
+     *
+     * Adds a link tag to the document head element, using arguments as tag
+     * options:
+     * <code> $document->addLink('alternate', array(
+     *     'href' => 'http://example.com/rss.xml',
+     *     'title' => 'RSS news',
+     *     'type' => 'application/rss+xml'
+     * ));</code>
+     *
+     * @uses AeDocument::addTag()
+     *
+     * @param string $rel   link tag rel attribute
+     * @param array  $attrs additional link tag attributes
+     *
+     * @return AeDocument self
+     */
     public function addLink($rel, $attrs = array())
     {
         if ($attrs instanceof AeArray) {
@@ -301,6 +362,37 @@ class AeDocument extends AeObject
         return $this->addTag('link', null, $attrs);
     }
 
+    /**
+     * Add style tag
+     *
+     * Adds a style tag to the document head element, using <var>$content</var>
+     * as stylesheet location or, if <var>$internal</var> is set to true, as
+     * internal stylesheet content. You can use <var>$attrs</var> parameter to
+     * pass an associative array of additional tag attributes, however, several
+     * basic attributes are set automatically for you. These attributes are
+     * type for both internal and external stylesheets, rel and href for
+     * external stylesheets only.
+     *
+     * You can also use the optional <var>$ie</var> attribute to make the
+     * stylesheet exclusive for certain version(s) of IE, using IE's conditional
+     * comments. See {@link AeDocument::addTag() addTag()} for more information.
+     *
+     * <b>NOTE:</b> This method checks if an external stylesheet has already
+     * been added to the document and only adds it if it was not. This may lead
+     * to improper stylesheet inclusion order. You can use {@link
+     * AeDocument::addTag() addTag()} method to override this check, but any
+     * stylesheet added this way will not be checked against when adding other
+     * stylesheets.
+     *
+     * @uses AeDocument::addTag()
+     *
+     * @param string     $content  stylesheet href or internal stylesheet contents
+     * @param bool       $internal internal stylesheet flag. Default: false
+     * @param array      $attrs    additional tag attributes
+     * @param int|string $ie       IE version or condition
+     *
+     * @return AeDocument self
+     */
     public function addStyle($content, $internal = false, $attrs = array(), $ie = null)
     {
         if ($content instanceof AeScalar) {
@@ -315,7 +407,7 @@ class AeDocument extends AeObject
             $attrs = $attrs->getValue();
         }
 
-        $attrs['type'] = 'text/css';
+        $attrs['type'] = isset($attrs['type']) ? $attrs['type'] : 'text/css';
 
         if ($internal) {
             return $this->addTag('style', $content, $attrs, $ie);
@@ -326,12 +418,42 @@ class AeDocument extends AeObject
         }
 
         $this->_styles[] = $content;
-        $attrs['rel']  = 'stylesheet';
+        $attrs['rel']  = isset($attrs['rel']) ? $attrs['rel'] : 'stylesheet';
         $attrs['href'] = $content;
 
         return $this->addTag('link', null, $attrs, $ie);
     }
 
+    /**
+     * Add script tag
+     *
+     * Adds a script tag to the document head element, using <var>$content</var>
+     * as script location or, if <var>$inline</var> is set to true, as inline
+     * script content. You can use <var>$attrs</var> parameter to pass an
+     * associative array of additional tag attributes, however, several basic
+     * attributes are set automatically for you. These attributes are type
+     * (text/javascript) for both inline and external scripts, src for external
+     * scripts only.
+     *
+     * You can also use the optional <var>$ie</var> attribute to make the script
+     * exclusive for certain version(s) of IE, using IE's conditional comments.
+     * See {@link AeDocument::addTag() addTag()} for more information.
+     *
+     * <b>NOTE:</b> This method checks if an external script has already been
+     * added to the document and only adds it if it was not. This may lead to
+     * improper script inclusion order. You can use {@link AeDocument::addTag()
+     * addTag()} method to override this check, but any script added this way
+     * will not be checked against when adding other scripts.
+     *
+     * @uses AeDocument::addTag()
+     *
+     * @param string     $content script src or inline script contents
+     * @param bool       $inline  inline script flag. Default: false
+     * @param array      $attrs   additional tag attributes
+     * @param int|string $ie      IE version or condition
+     *
+     * @return AeDocument self
+     */
     public function addScript($content, $inline = false, $attrs = array(), $ie = null)
     {
         if ($inline instanceof AeScalar) {
@@ -342,7 +464,7 @@ class AeDocument extends AeObject
             $attrs = $attrs->getValue();
         }
 
-        $attrs['type'] = 'text/javascript';
+        $attrs['type'] = isset($attrs['type']) ? $attrs['type'] : 'text/javascript';
 
         if (!$inline)
         {
@@ -358,8 +480,40 @@ class AeDocument extends AeObject
         return $this->addTag('script', $content, $attrs, $ie);
     }
 
-    public function setDocumentType($type = self::TYPE_XHTML_10_STRICT, $link = null, $xmlHead = null)
+    /**
+     * Set document type
+     *
+     * Sets the document type to the one specified. You can use one of the
+     * preset document types via class constants (see below), or provide your
+     * own doctype definition parameters:
+     * <code> $document->setType(
+     *     'PUBLIC "-//W3C//DTD XHTML 1.1//EN"',
+     *     'http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd'
+     * , true); </code>
+     *
+     * The effect of the example above is similar to that of:
+     * <code> $document->setType(AeDocument::TYPE_XHTML_11);</code>
+     *
+     * @see AeDocument::TYPE_HTML_401_STRICT, AeDocument::TYPE_HTML_401_FRAMESET,
+     *      AeDocument::TYPE_HTML_401_TRANSITIONAL
+     * @see AeDocument::TYPE_XHTML_10_STRICT, AeDocument::TYPE_XHTML_10_FRAMESET,
+     *      AeDocument::TYPE_XHTML_10_TRANSITIONAL
+     * @see AeDocument::TYPE_XHTML_11
+     * @see AeDocument::TYPE_HTML_5
+     *
+     * @param int|string $type    doctype constant or an FPI string
+     * @param string     $link    doctype DTD link
+     * @param bool       $xmlHead if this is true, an xml header will be added
+     *                            above the doctype
+     *
+     * @return AeDocument self
+     */
+    public function setType($type = null, $link = null, $xmlHead = null)
     {
+        if ($type === null) {
+            $type = self::TYPE_XHTML_10_STRICT;
+        }
+
         if (is_int($type))
         {
             // *** Pre-defined constants
@@ -367,7 +521,7 @@ class AeDocument extends AeObject
             {
                 case self::TYPE_XHTML_11: {
                     $dt = array(
-                        '-//W3C//DTD XHTML 1.1//EN',
+                        'PUBLIC "-//W3C//DTD XHTML 1.1//EN"',
                         'http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd',
                         true
                     );
@@ -375,7 +529,7 @@ class AeDocument extends AeObject
 
                 case self::TYPE_XHTML_10_TRANSITIONAL: {
                     $dt = array(
-                        '-//W3C//DTD XHTML 1.0 Transitional//EN',
+                        'PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"',
                         'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd',
                         true
                     );
@@ -383,7 +537,7 @@ class AeDocument extends AeObject
 
                 case self::TYPE_XHTML_10_FRAMESET: {
                     $dt = array(
-                        '-//W3C//DTD XHTML 1.0 Frameset//EN',
+                        'PUBLIC "-//W3C//DTD XHTML 1.0 Frameset//EN"',
                         'http://www.w3.org/TR/xhtml1/DTD/xhtml1-frameset.dtd',
                         true
                     );
@@ -391,21 +545,21 @@ class AeDocument extends AeObject
 
                 case self::TYPE_HTML_401_STRICT: {
                     $dt = array(
-                        '-//W3C//DTD HTML 4.01//EN',
+                        'PUBLIC "-//W3C//DTD HTML 4.01//EN"',
                         'http://www.w3.org/TR/html4/strict.dtd'
                     );
                 } break;
 
                 case self::TYPE_HTML_401_TRANSITIONAL: {
                     $dt = array(
-                        '-//W3C//DTD HTML 4.01 Transitional//EN',
+                        'PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"',
                         'http://www.w3.org/TR/html4/loose.dtd'
                     );
                 } break;
 
                 case self::TYPE_HTML_401_FRAMESET: {
                     $dt = array(
-                        '-//W3C//DTD HTML 4.01 Frameset//EN',
+                        'PUBLIC "-//W3C//DTD HTML 4.01 Frameset//EN"',
                         'http://www.w3.org/TR/html4/frameset.dtd'
                     );
                 } break;
@@ -417,7 +571,7 @@ class AeDocument extends AeObject
                 case self::TYPE_XHTML_10_STRICT:
                 default: {
                     $dt = array(
-                        '-//W3C//DTD XHTML 1.0 Strict//EN',
+                        'PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"',
                         'http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd',
                         true
                     );
@@ -464,11 +618,21 @@ class AeDocument extends AeObject
             $dt[2] = $xmlHead;
         }
 
-        $this->_documentType = $dt;
+        $this->_type = $dt;
 
         return $this;
     }
 
+    /**
+     * Set content type
+     *
+     * Sets the document content type using a meta tag. Encoding is set to UTF-8
+     * and cannot be changed.
+     *
+     * @param string $type content type. Default: text/html
+     *
+     * @return AeDocument self
+     */
     public function setContentType($type = 'text/html')
     {
         $this->_contentType = (string) $type;
@@ -476,6 +640,22 @@ class AeDocument extends AeObject
         return $this;
     }
 
+    /**
+     * Set favicon
+     *
+     * Sets the document favicon (shortcut icon) using a link tag. All the
+     * attributes, except the icon location, are set, but you can override
+     * the type attribute.
+     *
+     * @todo overwrite icon if present
+     *
+     * @uses AeDocument::addTag()
+     *
+     * @param string $location icon location
+     * @param string $type     icon type. Default: image/x-icon
+     *
+     * @return AeDocument self
+     */
     public function setIcon($location, $type = 'image/x-icon')
     {
         $attrs = array(
@@ -487,6 +667,18 @@ class AeDocument extends AeObject
         return $this->addTag('link', null, $attrs);
     }
 
+    /**
+     * Get tags
+     *
+     * Returns all the head tags as a valid html ready to be inserted inside the
+     * head tag. If an optional <var>$indent</var> parameter is passed, it will
+     * be used as a padding count for each tag. The first tag will not be
+     * padded. The padding character is space.
+     *
+     * @param int $indent
+     *
+     * @return string
+     */
     public function getTags($indent = 4)
     {
         $pre    = str_repeat(' ', $indent);
@@ -520,8 +712,34 @@ class AeDocument extends AeObject
         return ltrim($return);
     }
 
-    public function getTitle($separator = ' &ndash; ', $type = self::TITLE_REGULAR, $wrap = true)
+    /**
+     * Get title
+     *
+     * Returns a formed title ready to be inserted into a head tag. If an
+     * optional <var>$wrap</var> parameter is false, the title will not be
+     * wrapped by the title tag. This is useful to include the title in the
+     * document body.
+     *
+     * @todo add title escape
+     *
+     * @see AeDocument::TITLE_REGULAR, AeDocument::TITLE_REVERSE
+     *
+     * @param string $separator title bits separator. Default: &ndash;
+     * @param int    $type      title type constant. Default: TITLE_REGULAR
+     * @param bool   $wrap      title wrap flag. Default: true
+     *
+     * @return string
+     */
+    public function getTitle($separator = null, $type = null, $wrap = true)
     {
+        if ($separator === null) {
+            $separator = ' &ndash; ';
+        }
+
+        if ($type === null) {
+            $type = self::TITLE_REGULAR;
+        }
+
         $title = $this->_title;
 
         if (!empty($title))
@@ -548,6 +766,13 @@ class AeDocument extends AeObject
         return $title;
     }
 
+    /**
+     * Get content type
+     *
+     * Returns a content type meta tag ready to be inserted into a head tag
+     *
+     * @return string
+     */
     public function getContentType()
     {
         $ct = $this->_contentType;
@@ -555,13 +780,20 @@ class AeDocument extends AeObject
         return '<meta http-equiv="Content-Type" content="' . $ct . '; charset=utf-8" />' . "\n";
     }
 
-    public function getDocumentType()
+    /**
+     * Get type
+     *
+     * Returns a document type declaration ready to be inserted into document.
+     *
+     * @return string
+     */
+    public function getType()
     {
-        if (!is_array($this->_documentType)) {
+        if (!is_array($this->_type)) {
             return '';
         }
 
-        $dt     = $this->_documentType;
+        $dt     = $this->_type;
         $return = '';
 
         if (is_array($dt) && (bool) $dt[2] === true) {
@@ -572,7 +804,7 @@ class AeDocument extends AeObject
 
         if (!empty($dt[0]))
         {
-            $return .= ' PUBLIC "' . $dt[0] . '"';
+            $return .= ' ' . $dt[0];
 
             if (is_string($dt[1])) {
                 // *** Spacing to indent double quotes
@@ -585,17 +817,53 @@ class AeDocument extends AeObject
         return $return;
     }
 
-    public function getHead($indent = 4, $titleSeparator = ' &ndash; ', $titleType = self::TITLE_REGULAR, $wrap = true)
+    /**
+     * Get head
+     *
+     * Returns a document head section ready to be inserted into document. If an
+     * optional <var>$wrap</var> parameter is set to false, the output will not
+     * be wrapped by the head tag. This is useful if you want to provide
+     * additional head tags inside the template.
+     *
+     * <var>$indent</var> parameter specifies a number of spaces to put before
+     * each tag inside the head. If the head tag itself is present, it will be
+     * indented by 4 spaces less than this value (or 0, if this value is less
+     * than 4).
+     *
+     * <var>$title</var> parameter is an array of arguments to pass to the
+     * {@link AeDocument::getTitle() getTitle()} method. Note, that you can only
+     * specify two first arguments, the third one is always set to true.
+     *
+     * @uses AeDocument::getContentType()
+     * @uses AeDocument::getTitle()
+     * @uses AeDocument::getTags()
+     *
+     * @param int   $indent section indent number. Default: 4
+     * @param array $title  title method parameters. Default: empty
+     * @param bool  $wrap   head wrap flag. Default: true
+     *
+     * @return string
+     */
+    public function getHead($indent = 4, $title = null, $wrap = true)
     {
         if ($indent instanceof AeScalar) {
             $indent = $indent->toInteger()->getValue();
         }
 
+        if ($title === null) {
+            $title = array();
+        }
+
+        if ($title instanceof AeArray) {
+            $title = $title->getValue();
+        }
+
+        $title  = array_slice($title, 0, 2);
         $pre    = $indent > 0 ? str_repeat(' ', $indent) : '';
         $return = '';
 
         $return .= $this->getContentType();
-        $return .= $pre . $this->getTitle($titleSeparator, $titleType);
+        $return .= $pre . $this->call('getTitle', $title);
         $return .= $pre . $this->getTags($indent);
 
         if ($wrap instanceof AeScalar) {
@@ -613,6 +881,12 @@ class AeDocument extends AeObject
     }
 
     /**
+     * Get document
+     *
+     * Returns an instance of the document. This method can be used to ensure
+     * AeDocument remains a singleton across the application. You can still
+     * instantiate more than one instance of the class directly, however, if the
+     * need arises. Just use the class constructor.
      *
      * @return AeDocument
      */
