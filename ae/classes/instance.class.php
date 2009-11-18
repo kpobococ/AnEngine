@@ -19,6 +19,8 @@
  *
  * See {@link AeInstance::get()} for more details.
  *
+ * @todo implement set and remove methods to control object cache
+ *
  * @author Anton Suprun <kpobococ@gmail.com>
  * @version 1.0
  * @package AnEngine
