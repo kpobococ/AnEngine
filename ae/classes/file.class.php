@@ -101,7 +101,7 @@ abstract class AeFile
  * @package AnEngine
  * @todo add subpackage once custom documentor is done //Exception
  */
-class AeFileException extends AeException
+class AeFileException extends AeFileNodeException
 {
     /**
      * @param string $message
@@ -109,7 +109,7 @@ class AeFileException extends AeException
      */
     public function __construct($message, $code = 500)
     {
-        $this->_appendPrefix('File');
+        //$this->_appendPrefix('File');
         parent::__construct($message, $code);
     }
 }

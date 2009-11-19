@@ -20,6 +20,7 @@
  * See {@link AeInstance::get()} for more details.
  *
  * @todo implement set and remove methods to control object cache
+ * @todo consider making AeInstance instance-based, not static
  *
  * @author Anton Suprun <kpobococ@gmail.com>
  * @version 1.0
@@ -28,6 +29,8 @@
  */
 abstract class AeInstance
 {
+    protected static $_instances = array();
+
     /**
      * Get a class instance
      *
@@ -45,11 +48,9 @@ abstract class AeInstance
      */
     public static function get($class, $args = array(), $save = true, $useGetter = null)
     {
-        static $instances = array();
+        $key = self::generateKey($class, $args);
 
-        $key = md5($class.serialize($args));
-
-        if (!isset($instances[$key]))
+        if (!isset(self::$_instances[$key]))
         {
             if (!class_exists($class)) {
                 throw new AeInstanceException(ucfirst($class) . ' class not found', 404);
@@ -59,7 +60,7 @@ abstract class AeInstance
             {
                 if ($useGetter === null)
                 {
-                    // Check to prevent an infinite loop
+                    // *** Check to prevent an infinite loop
                     $trace     = debug_backtrace();
                     $trace     = array_splice($trace, 1);
                     $useGetter = true;
@@ -117,10 +118,51 @@ abstract class AeInstance
                 return $instance;
             }
 
-            $instances[$key] = $instance;
+            self::set($class, $instance, $args);
         }
 
-        return $instances[$key];
+        return self::$_instances[$key];
+    }
+
+    public static function set($class, $instance, $args = array())
+    {
+        if (!is_object($instance)) {
+            throw new AeInstanceException('Invalid value passed: expecting object, ' . AeType::of($instance) . ' given', 400);
+        }
+
+        $key = self::generateKey($class, $args);
+
+        self::$_instances[$key] = $instance;
+
+        return true;
+    }
+
+    public static function clear($class, $args = array())
+    {
+        $key = self::generateKey($class, $args);
+
+        if (!isset(self::$_instances[$key])) {
+            return false;
+        }
+
+        unset(self::$_instances[$key]);
+
+        return true;
+    }
+
+    public static function generateKey($class, $args = array())
+    {
+        $class = (string) $class;
+
+        if ($args instanceof AeArray) {
+            $args = $args->getValue();
+        }
+
+        if (!is_array($args)) {
+            $args = (array) $args;
+        }
+
+        return md5($class.serialize($args));
     }
 }
 
