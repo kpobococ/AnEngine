@@ -1,6 +1,6 @@
 <?php
 
-abstract class AeFile_Node extends AeObject implements AeInterface_File
+abstract class AeObject_File extends AeObject implements AeInterface_File
 {
     protected $_path;
 
@@ -31,8 +31,8 @@ abstract class AeFile_Node extends AeObject implements AeInterface_File
      * Note, that symbolic notation supports 9 and 10 characters, but the first
      * character of a 10 character string is always ignored.
      *
-     * @throws AeFileNodeException #400 on invalid value
-     * @throws AeFileNodeException #412 if file does not exist
+     * @throws AeFileException #400 on invalid value
+     * @throws AeFileException #412 if file does not exist
      *
      * @param int|string $mode
      *
@@ -41,7 +41,7 @@ abstract class AeFile_Node extends AeObject implements AeInterface_File
     public function setMode($mode)
     {
         if (!$this->exists()) {
-            throw new AeFileNodeException('Cannot set mode: file does not exist', 412);
+            throw new AeFileException('Cannot set mode: file does not exist', 412);
         }
 
         if ($mode instanceof AeScalar) {
@@ -56,7 +56,7 @@ abstract class AeFile_Node extends AeObject implements AeInterface_File
             {
                 // *** Symbolic notation
                 if ($length < 9 || $length > 10) {
-                    throw new AeFileNodeException('Invalid value passed: symbolic notation must be 9 or 10 characters, ' . $length . ' given', 400);
+                    throw new AeFileException('Invalid value passed: symbolic notation must be 9 or 10 characters, ' . $length . ' given', 400);
                 }
 
                 if ($length == 10) {
@@ -85,11 +85,11 @@ abstract class AeFile_Node extends AeObject implements AeInterface_File
         }
 
         if (!is_integer($mode)) {
-            throw new AeFileNodeException('Invalid value passed: expecting string or integer, ' . AeType::of($mode) . ' given', 400);
+            throw new AeFileException('Invalid value passed: expecting string or integer, ' . AeType::of($mode) . ' given', 400);
         }
 
         if (!preg_match('#0?[0-7]{3}#', decoct($mode))) {
-            throw new AeFileNodeException('Invalid value passed: value must be an octal integer', 400);
+            throw new AeFileException('Invalid value passed: value must be an octal integer', 400);
         }
 
         @chmod($this->path, $mode);
@@ -134,14 +134,14 @@ abstract class AeFile_Node extends AeObject implements AeInterface_File
      * disabled to increase the performance of such applications. On such
      * filesystems this function will be useless.
      *
-     * @throws AeFileNodeException #412 if file does not exist
+     * @throws AeFileException #412 if file does not exist
      *
      * @return AeDate
      */
     public function getAccessTime()
     {
         if (!$this->exists()) {
-            throw new AeFileNodeException('Cannot get access time: file does not exist', 412);
+            throw new AeFileException('Cannot get access time: file does not exist', 412);
         }
 
         return new AeDate(@fileatime($this->path));
@@ -150,7 +150,7 @@ abstract class AeFile_Node extends AeObject implements AeInterface_File
     public function getModifiedTime()
     {
         if (!$this->exists()) {
-            throw new AeFileNodeException('Cannot get modified time: file does not exist', 412);
+            throw new AeFileException('Cannot get modified time: file does not exist', 412);
         }
 
         return new AeDate(@filemtime($this->path));
@@ -158,6 +158,7 @@ abstract class AeFile_Node extends AeObject implements AeInterface_File
 
     public function getName()
     {
+        var_dump($this->path);
         return @basename($this->path);
     }
 
@@ -169,7 +170,7 @@ abstract class AeFile_Node extends AeObject implements AeInterface_File
     public function getMode($octal = true)
     {
         if (!$this->exists()) {
-            throw new AeFileNodeException('Cannot get mode: file does not exist', 412);
+            throw new AeFileException('Cannot get mode: file does not exist', 412);
         }
 
         $mode = fileperms($this->path);
@@ -200,7 +201,7 @@ abstract class AeFile_Node extends AeObject implements AeInterface_File
     public function getSize($human = false)
     {
         if (!$this->exists()) {
-            throw new AeFileNodeException('Cannot get size: file does not exist', 412);
+            throw new AeFileException('Cannot get size: file does not exist', 412);
         }
 
         $size = $this->_getSize();
@@ -230,7 +231,7 @@ abstract class AeFile_Node extends AeObject implements AeInterface_File
     public function getOwner($human = false)
     {
         if (!$this->exists()) {
-            throw new AeFileNodeException('Cannot get owner: file does not exist', 412);
+            throw new AeFileException('Cannot get owner: file does not exist', 412);
         }
 
         $owner = @fileowner($this->path);
@@ -246,7 +247,7 @@ abstract class AeFile_Node extends AeObject implements AeInterface_File
     public function getGroup($human = false)
     {
         if (!$this->exists()) {
-            throw new AeFileNodeException('Cannot get group: file does not exist', 412);
+            throw new AeFileException('Cannot get group: file does not exist', 412);
         }
 
         $group = @filegroup($this->path);
@@ -267,11 +268,11 @@ abstract class AeFile_Node extends AeObject implements AeInterface_File
     public function touch($time = null)
     {
         if (!$this->exists()) {
-            throw new AeFileNodeException('Cannot touch: file does not exist', 412);
+            throw new AeFileException('Cannot touch: file does not exist', 412);
         }
 
         if (!$this->isWritable()) {
-            throw new AeFileNodeException('Cannot touch: file is not writable', 401);
+            throw new AeFileException('Cannot touch: file is not writable', 401);
         }
 
         if ($time === null) {
@@ -283,7 +284,7 @@ abstract class AeFile_Node extends AeObject implements AeInterface_File
         }
 
         if (!is_numeric($time)) {
-            throw new AeFileNodeException('Invalid time value: expecting numeric or AeDate, ' . AeType::of($time) . ' given', 400);
+            throw new AeFileException('Invalid time value: expecting numeric or AeDate, ' . AeType::of($time) . ' given', 400);
         }
 
         @touch($this->path, $time);
@@ -294,15 +295,15 @@ abstract class AeFile_Node extends AeObject implements AeInterface_File
     public function rename($name)
     {
         if (!$this->exists()) {
-            throw new AeFileNodeException('Cannot rename: file does not exist', 412);
+            throw new AeFileException('Cannot rename: file does not exist', 412);
         }
 
         if (!$this->isWritable()) {
-            throw new AeFileNodeException('Cannot rename: file is not writable', 401);
+            throw new AeFileException('Cannot rename: file is not writable', 401);
         }
 
         if ($name != basename($name)) {
-            throw new AeFileNodeException('Invalid name value: name cannot be a path', 400);
+            throw new AeFileException('Invalid name value: name cannot be a path', 400);
         }
 
         if ($name != $this->name && $this->fireEvent('rename', array($this->name, $name))) {
@@ -315,11 +316,11 @@ abstract class AeFile_Node extends AeObject implements AeInterface_File
     public function move($path)
     {
         if (!$this->exists()) {
-            throw new AeFileNodeException('Cannot move: file does not exist', 412);
+            throw new AeFileException('Cannot move: file does not exist', 412);
         }
 
         if (!$this->isWritable()) {
-            throw new AeFileNodeException('Cannot move: file is not writable', 401);
+            throw new AeFileException('Cannot move: file is not writable', 401);
         }
 
         $parent = dirname($this->path);
@@ -327,11 +328,11 @@ abstract class AeFile_Node extends AeObject implements AeInterface_File
         if ($path != $parent)
         {
             if (!file_exists($path)) {
-                throw new AeFileNodeException('Invalid path value: target directory does not exist', 400);
+                throw new AeFileException('Invalid path value: target directory does not exist', 400);
             }
 
             if (!is_dir($path)) {
-                throw new AeFileNodeException('Invalid path value: target is not a directory', 400);
+                throw new AeFileException('Invalid path value: target is not a directory', 400);
             }
 
             if ($this->fileEvent('move', array($parent, $path))) {
@@ -356,11 +357,11 @@ abstract class AeFile_Node extends AeObject implements AeInterface_File
     public function delete()
     {
         if (!$this->exists()) {
-            throw new AeFileNodeException('Cannot delete: file does not exist', 412);
+            throw new AeFileException('Cannot delete: file does not exist', 412);
         }
 
         if (!$this->isWritable()) {
-            throw new AeFileNodeException('Cannot delete: file is not writable', 401);
+            throw new AeFileException('Cannot delete: file is not writable', 401);
         }
 
         if ($this->fireEvent('delete')) {
@@ -376,7 +377,7 @@ abstract class AeFile_Node extends AeObject implements AeInterface_File
         {
             if (!@unlink($path)) {
                 $e = error_get_last();
-                throw new AeFileNodeException('Delete failed:' . $e['message'], 500);
+                throw new AeFileException('Delete failed:' . $e['message'], 500);
             }
 
             return $this;
@@ -393,7 +394,7 @@ abstract class AeFile_Node extends AeObject implements AeInterface_File
 
         if (!@rmdir($path)) {
             $e = error_get_last();
-            throw new AeFileNodeException('Delete failed:' . $e['message'], 500);
+            throw new AeFileException('Delete failed:' . $e['message'], 500);
         }
 
         return $this;
@@ -409,7 +410,7 @@ abstract class AeFile_Node extends AeObject implements AeInterface_File
         $type = AeType::of($path);
 
         if ($type != 'string') {
-            throw new AeFileNodeException('Invalid path value: expecting string, ' . $type . ' given', 400);
+            throw new AeFileException('Invalid path value: expecting string, ' . $type . ' given', 400);
         }
 
         $path = (string) $path;
@@ -471,7 +472,7 @@ abstract class AeFile_Node extends AeObject implements AeInterface_File
             return @filetype($of);
         }
 
-        throw new AeFileNodeException('Invalid value passed: expecting file or path, object given', 400);
+        throw new AeFileException('Invalid value passed: expecting file or path, object given', 400);
     }
 
     public static function wrap($file)
@@ -487,18 +488,18 @@ abstract class AeFile_Node extends AeObject implements AeInterface_File
         $type = self::type($file);
 
         if ($type == 'directory') {
-            return AeInstance::get('AeDirectory', array($type), true, true);
+            return AeInstance::get('AeDirectory', array($file), true, true);
         }
 
         if ($type == 'file') {
-            return AeInstance::get('AeFile', array($type), true, true);
+            return AeInstance::get('AeFile', array($file), true, true);
         }
 
-        throw new AeFileNodeException('Invalid value passed: expection file or path, ' . AeType::of($file) . ' given', 400);
+        throw new AeFileException('Invalid value passed: expection file or path, ' . AeType::of($file) . ' given', 400);
     }
 }
 
-class AeFileNodeException extends AeException
+class AeFileException extends AeException
 {
     /**
      * @param string $message

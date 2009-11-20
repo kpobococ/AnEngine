@@ -91,26 +91,5 @@ abstract class AeFile
     }
 }
 
-/**
- * Files exception class
- *
- * Files-specific exception class
- *
- * @author Anton Suprun <kpobococ@gmail.com>
- * @version 1.0
- * @package AnEngine
- * @todo add subpackage once custom documentor is done //Exception
- */
-class AeFileException extends AeFileNodeException
-{
-    /**
-     * @param string $message
-     * @param int    $code
-     */
-    public function __construct($message, $code = 500)
-    {
-        //$this->_appendPrefix('File');
-        parent::__construct($message, $code);
-    }
-}
+// *** See AeObject_File ae/classes/object/file.class.php
 ?>

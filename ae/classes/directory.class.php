@@ -5,7 +5,7 @@
  * @todo move AeInterface_File implements statement to AeFile_Node class
  * @todo add exceptions for PHP function failures
  */
-class AeDirectory extends AeFile_Node implements Countable, IteratorAggregate
+class AeDirectory extends AeObject_File implements Countable, IteratorAggregate
 {
     protected $_path = null;
 
@@ -15,7 +15,7 @@ class AeDirectory extends AeFile_Node implements Countable, IteratorAggregate
             throw new AeDirectoryException('Invalid value passed: expecting directory, file given', 400);
         }
 
-        parent::setPath($this);
+        parent::setPath($path);
 
         if ($this->_path !== null && $this->_path != $path) {
             AeInstance::clear($this->getClass(), array($this->_path));
@@ -80,7 +80,7 @@ class AeDirectory extends AeFile_Node implements Countable, IteratorAggregate
 
     public function getIterator()
     {
-        return new AeDirectory_Iterator($this);
+        return AeDirectory_Iterator::getInstance($this);
     }
 
     public static function getInstance($path)
@@ -91,7 +91,7 @@ class AeDirectory extends AeFile_Node implements Countable, IteratorAggregate
     }
 }
 
-class AeDirectoryException extends AeFileNodeException
+class AeDirectoryException extends AeFileException
 {
     /**
      * @param string $message
