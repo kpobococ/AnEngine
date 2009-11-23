@@ -93,7 +93,7 @@ abstract class AeObject
 
         // *** Check if explicit getter is present for the property
         if ($this->_methodExists('get' . ucfirst($name))) {
-            return $this->call('get' . ucfirst($name), $default);
+            return $this->call('get' . ucfirst($name), array($default));
         }
 
         // *** Check if property exists
@@ -158,7 +158,7 @@ abstract class AeObject
 
         // *** Check if explicit setter is present for the property
         if ($this->_methodExists('set' . ucfirst($name))) {
-            return $this->call('set' . ucfirst($name), $value);
+            return $this->call('set' . ucfirst($name), array($value));
         }
 
         // *** Check if property exists

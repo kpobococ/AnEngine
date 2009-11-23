@@ -166,13 +166,7 @@ class AeSettings_Driver_Xml extends AeSettings_Driver
             return false;
         }
 
-        if (!file_exists($data)) {
-            $file = AeFile::getInstance('file', $data);
-            $file->create();
-        }
-
-        $data = realpath($data);
-
+        $data = AeFile::absolutePath($data);
         $xml  = AeXml::node('settings');
         $meta = $xml->addChild('meta');
 

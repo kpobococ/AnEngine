@@ -156,13 +156,9 @@ class AeSettings_Driver_Ini extends AeSettings_Driver
             return false;
         }
 
-        $file = AeFile::getInstance('file', $data);
+        $file = AeFile::getInstance($data);
 
-        if (!$file->exists()) {
-            $file->create();
-        } else {
-            $file->clear();
-        }
+        $file->clear();
 
         $file->append('; File generated automatically' . "\n");
         $file->append('; Path: ' . $file->getPath() . "\n");

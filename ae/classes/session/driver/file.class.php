@@ -75,16 +75,16 @@ class AeSession_Driver_File extends AeSession_Driver
      */
     public function clean($lifetime)
     {
-        $sessions = AeFile::getInstance('directory', $this->_storagePath);
+        $sessions = AeDirectory::getInstance($this->_storagePath);
         $expired  = time() - $lifetime;
 
         foreach ($sessions as $session)
         {
-            if (!$session->isFile() || $session->getExtension() != $this->_extension) {
+            if (!$session->isFile() || $session->extension != $this->_extension) {
                 continue;
             }
 
-            if ($session->getMTime() < $expired) {
+            if ($session->modifiedTime < $expired) {
                 $session->delete();
             }
         }
@@ -105,7 +105,7 @@ class AeSession_Driver_File extends AeSession_Driver
      */
     public function destroy($id)
     {
-        $session = AeFile::getInstance('file', $this->_storagePath . SLASH . $id . '.' . $this->_extension);
+        $session = AeFile::getInstance($this->_storagePath . SLASH . $id . '.' . $this->_extension);
 
         if (!$session->exists()) {
             return true;
@@ -126,7 +126,7 @@ class AeSession_Driver_File extends AeSession_Driver
      */
     public function read($id)
     {
-        $session = AeFile::getInstance('file', $this->_storagePath . SLASH . $id . '.' . $this->_extension);
+        $session = AeFile::getInstance($this->_storagePath . SLASH . $id . '.' . $this->_extension);
 
         if (!$session->exists()) {
             return '';
@@ -152,10 +152,11 @@ class AeSession_Driver_File extends AeSession_Driver
      */
     public function write($id, $data)
     {
-        $session = AeFile::getInstance('file', $this->_storagePath . SLASH . $id . '.' . $this->_extension);
+        $session = AeFile::getInstance($this->_storagePath . SLASH . $id . '.' . $this->_extension);
 
-        $session->clear();
-        return $session->write($data);
+        $session->clear()->write($data);
+
+        return true;
     }
 }
 

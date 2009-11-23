@@ -17,6 +17,8 @@
  * Iterator interface, enabling the user to iterate through the AeArray as if it
  * was a regular array.
  *
+ * @todo refactor and debug
+ *
  * @author Anton Suprun <kpobococ@gmail.com>
  * @version 1.0
  * @package AnEngine

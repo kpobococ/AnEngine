@@ -162,6 +162,13 @@ abstract class AeInstance
             $args = (array) $args;
         }
 
+        foreach ($args as $i => $arg)
+        {
+            if (is_object($arg)) {
+                $args[$i] = spl_object_hash($arg);
+            }
+        }
+
         return md5($class.serialize($args));
     }
 }

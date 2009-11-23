@@ -498,7 +498,7 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
         $array = clone $this;
 
         foreach ($array as $key => $value) {
-            $array[$key] = @$callback->call($value, $key);
+            $array[$key] = @$callback->call(array($value, $key));
         }
 
         return $array;

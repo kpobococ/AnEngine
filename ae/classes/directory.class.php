@@ -1,18 +1,10 @@
 <?php
 /**
  * @todo write documentation
- * @todo add exceptions for PHP function failures
  */
 class AeDirectory extends AeObject_File implements Countable, IteratorAggregate
 {
     protected $_handle;
-
-    public function __descturct()
-    {
-        if (is_resource($this->_handle)) {
-            @closedir($this->_handle);
-        }
-    }
 
     public function setPath($path)
     {
@@ -34,17 +26,6 @@ class AeDirectory extends AeObject_File implements Countable, IteratorAggregate
         $mode = parent::getMode($octal);
 
         return $octal === false ? 'd' . $mode : $mode;
-    }
-
-    protected function _getSize()
-    {
-        $size = 0;
-
-        foreach ($this as $file) {
-            $size += $file->getSize();
-        }
-
-        return $size;
     }
 
     public function getType()
@@ -88,16 +69,21 @@ class AeDirectory extends AeObject_File implements Countable, IteratorAggregate
 
     public function getHandle()
     {
-        if (!is_resource($this->_handle))
+        if (!$this->exists()) {
+            throw new AeDirectoryException('Cannot open: directory does not exist', 404);
+        }
+
+        if (!$this->isReadable()) {
+            throw new AeDirectoryException('Cannot open: permission denied', 403);
+        }
+
+        return $this->_open();
+    }
+
+    protected function _open()
+    {
+        if (!$this->_isOpened())
         {
-            if (!$this->exists()) {
-                throw new AeDirectoryException('Cannot open: directory does not exist', 404);
-            }
-
-            if (!$this->isReadable()) {
-                throw new AeDirectoryException('Cannot open: permission denied', 403);
-            }
-
             $this->_handle = @opendir($this->path);
 
             if (!$this->_handle) {
@@ -107,6 +93,17 @@ class AeDirectory extends AeObject_File implements Countable, IteratorAggregate
         }
 
         return $this->_handle;
+    }
+
+    protected function _close()
+    {
+        if ($this->_isOpened())
+        {
+            @closedir($this->_handle);
+            $this->_handle = null;
+        }
+
+        return $this;
     }
 
     public function getIterator()

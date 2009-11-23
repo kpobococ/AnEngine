@@ -244,7 +244,7 @@ class AeTemplate extends AeNode
         foreach ($callbacks as $callback)
         {
             if ($callback instanceof AeCallback) {
-                $value = $callback->call($value);
+                $value = $callback->call(array($value));
             } else {
                 $value = call_user_func($callback, $value);
             }

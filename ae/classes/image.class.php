@@ -22,6 +22,9 @@
  *
  * See {@link AeImage::__construct()} for more details
  *
+ * @todo refactor
+ * @todo add exceptions for failed php function calls
+ *
  * @requires GD library to be available on the server.
  *
  * @author Anton Suprun <kpobococ@gmail.com>
@@ -98,7 +101,7 @@ class AeImage extends AeObject
                 throw new AeImageException('Source file not found', 404);
             }
 
-            $this->setFile(realpath($source));
+            $this->setFile(AeFile::absolutePath($source));
         }
     }
 
@@ -111,7 +114,7 @@ class AeImage extends AeObject
         $this->setFile(null);
 
         if (is_resource($this->_image)) {
-            imagedestroy($this->_image);
+            @imagedestroy($this->_image);
         }
     }
 
@@ -140,11 +143,11 @@ class AeImage extends AeObject
         if (is_resource($this->_image)) {
             $info = array(@imagesx($this->_image), @imagesy($this->_image));
         } else {
-            if ($this->getFile() === null) {
+            if ($this->file === null) {
                 throw new AeImageException('No image is available', 400);
             }
 
-            $info = @getimagesize($this->getFile()->getPath());
+            $info = @getimagesize($this->file->path);
         }
 
         if (!is_array($info)) {
@@ -199,17 +202,17 @@ class AeImage extends AeObject
         }
 
         if (is_string($path)) {
-            $this->setFile(AeFile::getInstance('file', $path));
-        } else if (!is_object($this->getFile())) {
+            $this->setFile(AeFile::getInstance($path));
+        } else if (!is_object($this->file)) {
             throw new AeImageException('No path value passed', 400);
         }
 
         $args = func_get_args();
 
         // *** Set save path
-        $args[0] = $this->getFile()->getPath();
+        $args[0] = $this->file->path;
 
-        if (!$this->_output($this->getFile()->getExtension(), $args)) {
+        if (!$this->_output($this->file->extension, $args)) {
             throw new AeImageException('Cannot save image: internal error', 500);
         }
 
@@ -249,11 +252,11 @@ class AeImage extends AeObject
 
         if (!is_string($type))
         {
-            if (!is_object($this->getFile())) {
+            if (!is_object($this->file)) {
                 throw new AeImageException('No type value passed', 400);
             }
 
-            $type = $this->getFile()->getExtension();
+            $type = $this->file->extension;
         }
 
         $args = func_get_args();
@@ -289,11 +292,11 @@ class AeImage extends AeObject
      */
     public function getMime()
     {
-        if (!is_object($this->getFile())) {
+        if (!is_object($this->file)) {
             return false;
         }
 
-        return new AeString($this->_getMime($this->getFile()->getExtension()));
+        return new AeString($this->_getMime($this->file->extension));
     }
 
     /**
@@ -436,21 +439,21 @@ class AeImage extends AeObject
             return false;
         }
 
-        return new AeImage($this->getFile()->copy($path)->getPath());
+        return new AeImage($this->file->copy($path)->path);
     }
 
     /**
      * Get image file
      *
-     * Returns an image file object, wrapped in the {@link AeFile_Driver_File}
-     * class instance (or one of its subdrivers). This is useful when working
-     * with uploaded images:
+     * Returns an image file object, wrapped in the {@link AeFile} class
+     * instance (or one of its subdrivers). This is useful when working with
+     * uploaded images:
      * <code> $image = new AeImage($_FILES['foo']);
      * $image->getFile()->move('images');</code>
      *
-     * @see AeFile_Driver_File
+     * @see AeFile
      *
-     * @return AeFile_Driver_File
+     * @return AeFile
      */
     public function getFile()
     {
@@ -459,7 +462,7 @@ class AeImage extends AeObject
         }
 
         if (is_string($this->_file)) {
-            $this->setFile(AeFile::getInstance('file', $this->_file));
+            $this->setFile(AeFile::getInstance($this->_file));
         }
 
         return $this->_file;
@@ -483,11 +486,11 @@ class AeImage extends AeObject
     {
         if (!is_resource($this->_image))
         {
-            if ($this->getFile() === null) {
+            if ($this->file === null) {
                 throw new AeImageException('No image is available', 400);
             }
 
-            $type = $this->getFile()->getExtension();
+            $type = $this->file->extension;
 
             switch ($type)
             {
@@ -519,7 +522,7 @@ class AeImage extends AeObject
                 } break;
             }
 
-            $this->_image = call_user_func($function, $this->getFile()->getPath());
+            $this->_image = call_user_func($function, $this->file->path);
         }
 
         return $this->_image;

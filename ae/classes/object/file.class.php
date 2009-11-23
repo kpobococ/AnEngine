@@ -1,5 +1,7 @@
 <?php
-
+/**
+ * @todo write documentation
+ */
 abstract class AeObject_File extends AeObject implements AeInterface_File
 {
     protected $_path = null;
@@ -8,6 +10,13 @@ abstract class AeObject_File extends AeObject implements AeInterface_File
     {
         if (!is_null($path)) {
             $this->setPath($path);
+        }
+    }
+
+    public function __destruct()
+    {
+        if ($this->_isOpened()) {
+            $this->_close();
         }
     }
 
@@ -92,7 +101,11 @@ abstract class AeObject_File extends AeObject implements AeInterface_File
             throw new AeFileException('Invalid value passed: value must be an octal integer', 400);
         }
 
-        @chmod($this->path, $mode);
+        if (!@chmod($this->path, $mode)) {
+            $e = error_get_last();
+            throw new AeFileException('Cannot set mode: ' . $e['message'], 500);
+        }
+
         @clearstatcache();
 
         return $this;
@@ -122,6 +135,16 @@ abstract class AeObject_File extends AeObject implements AeInterface_File
         return is_link($this->path);
     }
 
+    public function isFile()
+    {
+        return is_file($this->path);
+    }
+
+    public function isDirectory()
+    {
+        return is_dir($this->path);
+    }
+
     /**
      * Get last access time
      *
@@ -144,7 +167,14 @@ abstract class AeObject_File extends AeObject implements AeInterface_File
             throw new AeFileException('Cannot get access time: file does not exist', 412);
         }
 
-        return new AeDate(@fileatime($this->path));
+        $time = @fileatime($this->path);
+
+        if ($time === false) {
+            $e = error_get_last();
+            throw new AeFileException('Cannot get access time: ' . $e['message'], 500);
+        }
+
+        return new AeDate($time);
     }
 
     public function getModifiedTime()
@@ -153,12 +183,18 @@ abstract class AeObject_File extends AeObject implements AeInterface_File
             throw new AeFileException('Cannot get modified time: file does not exist', 412);
         }
 
-        return new AeDate(@filemtime($this->path));
+        $time = @filemtime($this->path);
+
+        if ($time === false) {
+            $e = error_get_last();
+            throw new AeFileException('Cannot get modified time: ' . $e['message'], 500);
+        }
+
+        return new AeDate($time);
     }
 
     public function getName()
     {
-        var_dump($this->path);
         return @basename($this->path);
     }
 
@@ -173,7 +209,12 @@ abstract class AeObject_File extends AeObject implements AeInterface_File
             throw new AeFileException('Cannot get mode: file does not exist', 412);
         }
 
-        $mode = fileperms($this->path);
+        $mode = @fileperms($this->path);
+
+        if ($mode === false) {
+            $e = error_get_last();
+            throw new AeFileException('Cannot get mode: ' . $e['message'], 500);
+        }
 
         if ($octal === false)
         {
@@ -204,24 +245,8 @@ abstract class AeObject_File extends AeObject implements AeInterface_File
             throw new AeFileException('Cannot get size: file does not exist', 412);
         }
 
-        $size = $this->_getSize();
-
-        if ($human === true)
-        {
-            // *** I doubt that values higher than GiB will occur, but let it stay
-            $suffix = array('B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB', 'YiB');
-            $e      = floor(log($size, 1024));
-            $size   = round($size / pow(1024, $e), 2);
-
-            if ($e > 0) {
-                $size = number_format($size, 2, '.', ' ') . ' ' . $suffix[$e];
-            }
-        }
-
-        return $size;
+        return self::size($this->path, $human);
     }
-
-    abstract protected function _getSize();
 
     public function getType()
     {
@@ -235,6 +260,11 @@ abstract class AeObject_File extends AeObject implements AeInterface_File
         }
 
         $owner = @fileowner($this->path);
+
+        if ($owner === false) {
+            $e = error_get_last();
+            throw new AeFileException('Cannot get owner: ' . $e['message'], 500);
+        }
 
         if ($human === true && function_exists('posix_getpwuid')) {
             $info  = posix_getpwuid($owner);
@@ -251,6 +281,11 @@ abstract class AeObject_File extends AeObject implements AeInterface_File
         }
 
         $group = @filegroup($this->path);
+
+        if ($group === false) {
+            $e = error_get_last();
+            throw new AeFileException('Cannot get group: ' . $e['message'], 500);
+        }
 
         if ($human === true && function_exists('posix_getgrgid')) {
             $info  = posix_getgrgid($group);
@@ -287,7 +322,10 @@ abstract class AeObject_File extends AeObject implements AeInterface_File
             throw new AeFileException('Invalid time value: expecting numeric or AeDate, ' . AeType::of($time) . ' given', 400);
         }
 
-        @touch($this->path, $time);
+        if (!@touch($this->path, $time)) {
+            $e = error_get_last();
+            throw new AeFileException('Cannot touch: ' . $e['message'], 500);
+        }
 
         return $this;
     }
@@ -323,6 +361,10 @@ abstract class AeObject_File extends AeObject implements AeInterface_File
             throw new AeFileException('Cannot move: file is not writable', 401);
         }
 
+        if ($path instanceof AeInterface_File) {
+            $path = $path->getPath();
+        }
+
         $parent = dirname($this->path);
 
         if ($path != $parent)
@@ -345,13 +387,12 @@ abstract class AeObject_File extends AeObject implements AeInterface_File
 
     protected function _renmov($path)
     {
-        $return = @rename($this->path, $path);
-
-        if ($return !== false) {
-            $this->setPath($path);
+        if (!@rename($this->path, $path)) {
+            $e = error_get_last();
+            throw new AeFileException('Cannot rename: ' . $e['message'], 500);
         }
 
-        return $this;
+        return $this->setPath($path);
     }
 
     public function delete()
@@ -365,6 +406,7 @@ abstract class AeObject_File extends AeObject implements AeInterface_File
         }
 
         if ($this->fireEvent('delete')) {
+            $this->_close();
             $this->_delete($this->path);
         }
 
@@ -405,12 +447,24 @@ abstract class AeObject_File extends AeObject implements AeInterface_File
         return file_exists($this->path);
     }
 
+    protected function _isOpened()
+    {
+        return is_resource($this->_handle);
+    }
+
+    abstract protected function _open();
+    abstract protected function _close();
+
     public static function absolutePath($path)
     {
+        if ($path instanceof AeInterface_File) {
+            $path = $path->getPath();
+        }
+
         $type = AeType::of($path);
 
         if ($type != 'string') {
-            throw new AeFileException('Invalid path value: expecting string, ' . $type . ' given', 400);
+            throw new AeFileException('Invalid value passed: expecting file or string, ' . $type . ' given', 400);
         }
 
         $path = (string) $path;
@@ -448,15 +502,8 @@ abstract class AeObject_File extends AeObject implements AeInterface_File
 
     public static function type($of)
     {
-        if (is_object($of))
-        {
-            if ($of instanceof AeObject_File) {
-                return self::type($of->path);
-            }
-
-            if ($of instanceof AeInterface_File) {
-                return $of->getType();
-            }
+        if ($of instanceof AeInterface_File) {
+            return $of->getType();
         }
 
         if (is_string($of) && file_exists($of))
@@ -481,7 +528,7 @@ abstract class AeObject_File extends AeObject implements AeInterface_File
             $file = (string) $file;
         }
 
-        if (is_object($file) && $file instanceof AeObject_File) {
+        if ($file instanceof AeObject_File) {
             return $file;
         }
 
@@ -495,7 +542,57 @@ abstract class AeObject_File extends AeObject implements AeInterface_File
             return AeInstance::get('AeFile', array($file), true, true);
         }
 
-        throw new AeFileException('Invalid value passed: expection file or path, ' . AeType::of($file) . ' given', 400);
+        throw new AeFileException('Invalid value passed: expecting file or path, ' . AeType::of($file) . ' given', 400);
+    }
+
+    public static function size($of, $human = false)
+    {
+        if ($of instanceof AeInterface_File) {
+            return $of->getSize($human);
+        }
+
+        $type = AeType::of($of);
+
+        if ($type != 'string') {
+            throw new AeFileException('Invalid value passed: expecting file or path, ' . $type . ' given', 400);
+        }
+
+        if (!is_dir($of))
+        {
+            $size = @filesize($of);
+
+            if ($size === false) {
+                $e = error_get_last();
+                throw new AeFileException('Delete failed:' . $e['message'], 500);
+            }
+        } else {
+            $size = 0;
+
+            foreach (scandir($of) as $name)
+            {
+                if ($name == '.' || $name == '..') {
+                    continue;
+                }
+
+                $size = self::size($of . SLASH . $name);
+            }
+        }
+
+        if ($human === true)
+        {
+            // *** I doubt that values higher than GiB will occur, but let it stay
+            $suffix = array('B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB', 'YiB');
+            $e      = floor(log($size, 1024));
+            $size   = round($size / pow(1024, $e), 2);
+
+            if ($e > 0) {
+                $size = number_format($size, 2, '.', ' ');
+            }
+
+            $size = $size . ' ' . $suffix[$e];
+        }
+
+        return $size;
     }
 }
 

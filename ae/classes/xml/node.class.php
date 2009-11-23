@@ -677,7 +677,11 @@ class AeXml_Node extends AeNode
             $file .= '.xml';
         }
 
-        $file = AeFile::getInstance('file', $file);
+        $file = AeFile::getInstance($file);
+
+        if (!$file->exists()) {
+            $file->create();
+        }
 
         if (!$file->write((string) $this)) {
             return false;

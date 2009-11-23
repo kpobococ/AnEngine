@@ -1,6 +1,6 @@
 <?php
 /**
- * Files interface file
+ * File interface file
  *
  * See {@link AeInterface_File} interface documentation.
  *
@@ -10,9 +10,11 @@
  */
 
 /**
- * Files interface
+ * File interface
  *
  * This is a common file interface. All file classes must implement it.
+ *
+ * @todo consider adding the copy() method
  *
  * @author Anton Suprun <kpobococ@gmail.com>
  * @version 1.0
@@ -30,6 +32,8 @@ interface AeInterface_File
     public function isExecutable();
 
     public function isLink();
+    public function isFile();
+    public function isDirectory();
 
     public function getAccessTime();
     public function getModifiedTime();
