@@ -5,7 +5,6 @@ class AeDirectory_Iterator extends AeObject implements Iterator
     protected $_current = null;
     protected $_key = null;
     protected $_directory;
-    protected $_handle;
 
     public static function getInstance(AeDirectory $directory)
     {
@@ -23,36 +22,15 @@ class AeDirectory_Iterator extends AeObject implements Iterator
         $this->rewind();
     }
 
-    public function getHandle()
-    {
-        if (!is_resource($this->_handle))
-        {
-            if (!$this->directory->exists()) {
-                throw new AeDirectoryIteratorException('Cannot open: directory does not exist', 404);
-            }
-
-            if (!$this->directory->isReadable()) {
-                throw new AeDirectoryIteratorException('Cannot open: permission denied', 403);
-            }
-
-            $this->_handle = @opendir($this->directory->path);
-
-            if (!$this->_handle) {
-                $e = error_get_last();
-                throw new AeDirectoryIteratorException('Cannot open: ' . $e['message'], 500);
-            }
-        }
-
-        return $this->_handle;
-    }
-
     public function rewind()
     {
-        $dh = $this->getHandle();
+        $dh = $this->directory->getHandle();
 
         @rewinddir($dh);
 
-        $current = @readdir($dh);
+        do {
+            $current = @readdir($dh);
+        } while ($current == '.' || $current == '..');
 
         if ($current !== false) {
             $this->_current = $current;
@@ -81,9 +59,11 @@ class AeDirectory_Iterator extends AeObject implements Iterator
 
     public function next()
     {
-        $dh = $this->getHandle();
+        $dh = $this->directory->getHandle();
 
-        $current = @readdir($dh);
+        do {
+            $current = @readdir($dh);
+        } while ($current == '.' || $current == '..');
 
         if ($current !== false) {
             $this->_current = $current;

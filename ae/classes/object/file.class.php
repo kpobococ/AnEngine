@@ -2,7 +2,7 @@
 
 abstract class AeObject_File extends AeObject implements AeInterface_File
 {
-    protected $_path;
+    protected $_path = null;
 
     public function __construct($path = null)
     {
@@ -36,7 +36,7 @@ abstract class AeObject_File extends AeObject implements AeInterface_File
      *
      * @param int|string $mode
      *
-     * @return AeFile_Node self
+     * @return AeObject_File self
      */
     public function setMode($mode)
     {
@@ -450,8 +450,8 @@ abstract class AeObject_File extends AeObject implements AeInterface_File
     {
         if (is_object($of))
         {
-            if ($of instanceof AeFile_Node) {
-                return self::Type($of->path);
+            if ($of instanceof AeObject_File) {
+                return self::type($of->path);
             }
 
             if ($of instanceof AeInterface_File) {
@@ -481,7 +481,7 @@ abstract class AeObject_File extends AeObject implements AeInterface_File
             $file = (string) $file;
         }
 
-        if (is_object($file) && $file instanceof AeFile_Node) {
+        if (is_object($file) && $file instanceof AeObject_File) {
             return $file;
         }
 

@@ -1,18 +1,23 @@
 <?php
 /**
  * @todo write documentation
- * @todo inherit both this and AeFile from a single AeFile_Node abstract class
- * @todo move AeInterface_File implements statement to AeFile_Node class
  * @todo add exceptions for PHP function failures
  */
 class AeDirectory extends AeObject_File implements Countable, IteratorAggregate
 {
-    protected $_path = null;
+    protected $_handle;
+
+    public function __descturct()
+    {
+        if (is_resource($this->_handle)) {
+            @closedir($this->_handle);
+        }
+    }
 
     public function setPath($path)
     {
         if (file_exists($path) && !is_dir($path)) {
-            throw new AeDirectoryException('Invalid value passed: expecting directory, file given', 400);
+            throw new AeDirectoryException('Invalid value passed: expecting directory, ' . AeFile::type($path) . ' given', 400);
         }
 
         parent::setPath($path);
@@ -62,7 +67,10 @@ class AeDirectory extends AeObject_File implements Countable, IteratorAggregate
             throw new AeDirectoryException('Cannot create: parent directory is not writable', 401);
         }
 
-        @mkdir($this->path);
+        if (!@mkdir($this->path)) {
+            $e = error_get_last();
+            throw new AeDirectoryException('Cannot create: ' . $e['message'], 500);
+        }
 
         $this->setPath($this->path);
 
@@ -76,6 +84,29 @@ class AeDirectory extends AeObject_File implements Countable, IteratorAggregate
     public function count()
     {
         return count(scandir($this->path)) - 2;
+    }
+
+    public function getHandle()
+    {
+        if (!is_resource($this->_handle))
+        {
+            if (!$this->exists()) {
+                throw new AeDirectoryException('Cannot open: directory does not exist', 404);
+            }
+
+            if (!$this->isReadable()) {
+                throw new AeDirectoryException('Cannot open: permission denied', 403);
+            }
+
+            $this->_handle = @opendir($this->path);
+
+            if (!$this->_handle) {
+                $e = error_get_last();
+                throw new AeDirectoryException('Cannot open: ' . $e['message'], 500);
+            }
+        }
+
+        return $this->_handle;
     }
 
     public function getIterator()
