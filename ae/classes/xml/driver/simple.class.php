@@ -4,6 +4,8 @@
  *
  * See {@link AeXml_Driver_Simple} class documentation.
  *
+ * @requires xml
+ *
  * @author Anton Suprun <kpobococ@gmail.com>
  * @version 1.0
  * @package AnEngine
@@ -14,7 +16,13 @@
  * Simple XML parser driver
  *
  * This XML parser uses PHP's XML Parser functions to parse an XML file into a
- * tree of {@link AeXml_Node AeXml_Nodes}
+ * tree of {@link AeXml_Node AeXml_Nodes}.
+ * 
+ * This parser requires PHP's XML library to be installed. This library comes
+ * enabled by default, but may be disabled when compiling PHP manually with a
+ * certain command line option.
+ *
+ * @requires xml
  *
  * @author Anton Suprun <kpobococ@gmail.com>
  * @version 1.0
@@ -57,16 +65,16 @@ class AeXml_Driver_Simple extends AeXml_Driver
     {
         if (!function_exists('xml_parser_create')) {
             throw new AeXmlDriverSimpleException('PHP XML Parser functions are not available', 404);
-		}
+        }
 
         $this->_parser = xml_parser_create('UTF-8');
 
         xml_set_object($this->_parser, $this);
         xml_parser_set_option($this->_parser, XML_OPTION_CASE_FOLDING, 0);
 
-		// *** Set parse handlers
-		xml_set_element_handler($this->_parser, 'startElement', 'endElement');
-		xml_set_character_data_handler($this->_parser, 'characterData');
+        // *** Set parse handlers
+        xml_set_element_handler($this->_parser, 'startElement', 'endElement');
+        xml_set_character_data_handler($this->_parser, 'characterData');
 
         if (!xml_parse($this->_parser, $this->getSource()))
         {

@@ -86,7 +86,7 @@ class AeSettings_Driver_Php extends AeSettings_Driver
         $data = $data === null ? $this->_filename : $data;
 
         // *** Check extension and add if required
-        if (!strpos($data, '.')) {
+        if (strpos($data, '.') === false) {
             $data .= '.' . self::EXTENSION;
         }
 
@@ -163,7 +163,7 @@ class AeSettings_Driver_Php extends AeSettings_Driver
         }
 
         // *** Check extension and add if required
-        if (!strpos($data, '.')) {
+        if (strpos($data, '.') === false) {
             $data .= '.' . self::EXTENSION;
         }
 

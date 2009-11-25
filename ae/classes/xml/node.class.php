@@ -521,10 +521,12 @@ class AeXml_Node extends AeNode
     {
         // *** Remove current parent first
         if ($this->hasParent()) {
+            echo ' - removed previous parent' . "\n";
             $this->parent->removeChild($this);
         }
 
         // *** Add element as a parent's child instead
+        echo ' - add child to the new parent' . "\n";
         if (!$parent->addChild($this)) {
             throw new AeXmlNodeException('Cannot set node parent', 406);
         }
@@ -673,7 +675,7 @@ class AeXml_Node extends AeNode
     {
         $file = (string) $file;
 
-        if (!strpos($file, '.')) {
+        if (strpos($file, '.') === false) {
             $file .= '.xml';
         }
 

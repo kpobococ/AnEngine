@@ -145,7 +145,7 @@ class AeTemplate extends AeNode
     public function __construct($template)
     {
         // *** Add extension, if none is found
-        if (!strpos($template, '.')) {
+        if (strpos($template, '.') === false) {
             $template .= '.' . self::$_templateExtension;
         }
 

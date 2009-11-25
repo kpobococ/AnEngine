@@ -60,6 +60,8 @@ abstract class AeType extends AeObject
      * that class. If the value passed is not a type value, false is returned.
      * Type values are null, boolean, integer, float, string and array values.
      *
+     * @todo resolve the false issue
+     *
      * @param mixed $value
      *
      * @return AeType|false
@@ -150,23 +152,29 @@ abstract class AeType extends AeObject
             $value = $value === null ? $default : $value;
         }
 
-        if (self::$wrapReturn === true && !($value instanceof AeType)) {
-            return self::wrap($value);
-        }
-
-        if (self::$wrapReturn === null)
+        if (self::of($value) != 'object')
         {
-            if (is_scalar($value) || $value instanceof AeScalar) {
-                return AeScalar::_wrapReturn($value);
+            // *** Wrap, if enabled
+            if (self::$wrapReturn === true && !($value instanceof AeType)) {
+                return self::wrap($value);
             }
 
-            if (is_array($value) || $value instanceof AeArray) {
-                return AeArray::_wrapReturn($value);
-            }
-        }
+            // *** Detect further down the class tree
+            if (self::$wrapReturn === null)
+            {
+                if (is_scalar($value) || $value instanceof AeScalar) {
+                    return AeScalar::_wrapReturn($value);
+                }
 
-        if (self::$wrapReturn === false && $value instanceof AeType) {
-            $value = $value->getValue();
+                if (is_array($value) || $value instanceof AeArray) {
+                    return AeArray::_wrapReturn($value);
+                }
+            }
+
+            // *** Unwrap if disabled
+            if (self::$wrapReturn === false && $value instanceof AeType) {
+                return $value->getValue();
+            }
         }
 
         return $value;

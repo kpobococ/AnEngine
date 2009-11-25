@@ -334,6 +334,8 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
     /**
      * Pop the element off the end of array
      *
+     * @todo maybe use AeType::wrapReturn() instead of AeType::wrap()
+     *
      * @see array_pop()
      *
      * @return AeType|mixed

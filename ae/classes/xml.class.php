@@ -73,7 +73,7 @@ abstract class AeXml
      */
     public static function getContents($file, $driver = null)
     {
-        if (!strpos($file, '.')) {
+        if (strpos($file, '.') === false) {
             $file .= '.xml';
         }
 
