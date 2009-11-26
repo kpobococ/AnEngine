@@ -165,7 +165,7 @@ class AeString extends AeScalar implements ArrayAccess
             }
         }
 
-        if (!is_null($this->_value) && $this->length() >= $index + 1) {
+        if (!is_null($this->_value) && $this->length >= $index + 1) {
             return new AeString(iconv_substr($this->_value, $index, 1, 'UTF-8'));
         }
 
@@ -246,7 +246,7 @@ class AeString extends AeScalar implements ArrayAccess
             throw new AeStringException('Invalid length value: length must be greater than zero', 400);
         }
 
-        if ($length <= $this->length()) {
+        if ($length <= $this->length) {
             return $this;
         }
 
@@ -305,7 +305,7 @@ class AeString extends AeScalar implements ArrayAccess
      */
     public function reverse()
     {
-        $length = $this->length();
+        $length = $this->length;
         $strlen = strlen($this->getValue());
 
         if ($length != $strlen)
@@ -422,7 +422,7 @@ class AeString extends AeScalar implements ArrayAccess
             $start = $start->toInteger()->getValue();
         }
 
-        if ($start >= $this->length()) {
+        if ($start >= $this->length) {
             throw new AeStringException('Invalid start value: value exceeds string length', 400);
         }
 
@@ -431,7 +431,7 @@ class AeString extends AeScalar implements ArrayAccess
         }
 
         if ($length === null) {
-            return new AeString(iconv_substr($this->_value, $start, $this->length(), 'UTF-8'));
+            return new AeString(iconv_substr($this->_value, $start, $this->length, 'UTF-8'));
         }
 
         return new AeString(iconv_substr($this->_value, $start, $length, 'UTF-8'));
@@ -853,7 +853,7 @@ class AeString extends AeScalar implements ArrayAccess
 
                 // *** Emulate $offset parameter for iconv_strrpos
                 if ($offset > 0) {
-                    $string = iconv_substr($this->_value, $offset, $this->length(), 'UTF-8');
+                    $string = iconv_substr($this->_value, $offset, $this->length, 'UTF-8');
                 } else {
                     $string = iconv_substr($this->_value, 0, $offset, 'UTF-8');
                     $offset = 0;
@@ -889,7 +889,7 @@ class AeString extends AeScalar implements ArrayAccess
      *
      * @return int
      */
-    public function length()
+    public function getLength()
     {
         return iconv_strlen($this->_value, 'UTF-8');
     }
@@ -928,7 +928,7 @@ class AeString extends AeScalar implements ArrayAccess
             throw new AeStringException('Invalid offset value: expecting int, ' . AeType::of($offset) . ' given', 400);
         }
 
-        return $this->length() > $offset;
+        return $this->length > $offset;
     }
 
     /**

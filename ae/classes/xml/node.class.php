@@ -16,6 +16,11 @@
  * This is an xml node class. It represents a single XML element, along with all
  * of it's properties, child nodes or data.
  *
+ * @todo add a separate class for text nodes
+ * @todo refactor node child-parent relation methods
+ * @todo refactor node text-data relation methods
+ * @todo review and refactor all node methods
+ *
  * @author Anton Suprun <kpobococ@gmail.com>
  * @version 1.0
  * @package AnEngine
@@ -100,8 +105,8 @@ class AeXml_Node extends AeNode
     /**
      * Get children status
      *
-     * @param AeString|string $filter if used, detects if element has children
-     *                                with that name
+     * @param string $filter if used, detects if element has children with that
+     *                       name
      *
      * @return bool true if children found, false otherwise
      */
@@ -115,9 +120,11 @@ class AeXml_Node extends AeNode
             return false;
         }
 
+        $filter = (string) $filter;
+
         foreach ($this->_children as $child)
         {
-            if ($child->name == (string) $filter) {
+            if ($child->name == $filter) {
                 return true;
             }
         }
@@ -186,9 +193,9 @@ class AeXml_Node extends AeNode
      * If <var>$filter</var> parameter is set, it will be used as an element tag
      * name filter for a resulting array
      *
-     * @param AeString|string $filter
+     * @param string $filter
      *
-     * @return AeArray
+     * @return AeArray|array
      */
     public function getChildren($filter = null)
     {
@@ -201,10 +208,11 @@ class AeXml_Node extends AeNode
         }
 
         $return = array();
+        $filter = (string) $filter;
 
         foreach ($this->children as $node)
         {
-            if ($node->getName() == (string) $filter) {
+            if ($node->name == $filter) {
                 array_push($return, $node);
             }
         }
@@ -230,7 +238,7 @@ class AeXml_Node extends AeNode
      * If <var>$filter</var> parameter is set, it will be used as an element tag
      * name filter for a resulting element
      *
-     * @param AeString|string $filter
+     * @param string $filter
      *
      * @return AeXml_Node
      */
@@ -257,7 +265,7 @@ class AeXml_Node extends AeNode
      * If <var>$filter</var> parameter is set, it will be used as an element tag
      * name filter for a resulting element
      *
-     * @param AeString|string $filter
+     * @param string $filter
      *
      * @return AeXml_Node
      */
@@ -285,7 +293,7 @@ class AeXml_Node extends AeNode
      * If <var>$filter</var> parameter is set, it will be used as an element tag
      * name filter for a resulting element
      *
-     * @param AeString|string $filter
+     * @param string $filter
      *
      * @return AeXml_Node
      */
@@ -317,7 +325,7 @@ class AeXml_Node extends AeNode
      * If <var>$filter</var> parameter is set, it will be used as an element tag
      * name filter for a resulting element
      *
-     * @param AeString|string $filter
+     * @param string $filter
      *
      * @return AeXml_Node
      */
@@ -354,6 +362,10 @@ class AeXml_Node extends AeNode
      */
     public function get($name, $default = null)
     {
+        if ($this->propertyExists($name)) {
+            return parent::get($name, $default);
+        }
+
         return AeType::wrapReturn(parent::get($name, $default));
     }
 
@@ -368,7 +380,7 @@ class AeXml_Node extends AeNode
      */
     public function getChild($offset)
     {
-        return $this->hasChild($offset) ? $this->children[$offset] : null;
+        return $this->hasChild($offset) ? $this->_children[$offset] : null;
     }
 
     /**
@@ -500,6 +512,8 @@ class AeXml_Node extends AeNode
         // *** Remove child from array and reset child's properties
         unset($this->_children[$child->_position]);
 
+        // TODO: reindex remaining children positions
+
         $this->_children  = array_values($this->_children);
         $child->_position = null;
         $child->_parent   = null;
@@ -521,15 +535,11 @@ class AeXml_Node extends AeNode
     {
         // *** Remove current parent first
         if ($this->hasParent()) {
-            echo ' - removed previous parent' . "\n";
             $this->parent->removeChild($this);
         }
 
         // *** Add element as a parent's child instead
-        echo ' - add child to the new parent' . "\n";
-        if (!$parent->addChild($this)) {
-            throw new AeXmlNodeException('Cannot set node parent', 406);
-        }
+        $parent->addChild($this);
 
         return $this;
     }
@@ -564,6 +574,8 @@ class AeXml_Node extends AeNode
         }
 
         $this->_properties = $properties;
+
+        return $this;
     }
 
     /**
@@ -575,7 +587,7 @@ class AeXml_Node extends AeNode
      */
     public function setData($value)
     {
-        if ($this->hasChildren() && $this->children->length() > $this->getChildren('@text')->length()) {
+        if ($this->hasChildren() && $this->children->length > $this->getChildren('@text')->length) {
             throw new AeXmlNodeException('Cannot set data of nodes with child elements', 406);
         }
 

@@ -334,8 +334,6 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
     /**
      * Pop the element off the end of array
      *
-     * @todo maybe use AeType::wrapReturn() instead of AeType::wrap()
-     *
      * @see array_pop()
      *
      * @return AeType|mixed
@@ -344,7 +342,7 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
     {
         $return = array_pop($this->_value);
 
-        return AeType::wrap($return);
+        return AeType::wrapReturn($return);
     }
 
     /**
@@ -383,7 +381,7 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
     {
         $return = array_shift($this->_value);
 
-        return AeType::wrap($return);
+        return AeType::wrapReturn($return);
     }
 
     /**
@@ -422,7 +420,7 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
         if ($mode == AeArray::RANDOM_VALUES)
         {
             if ($count == 1) {
-                return AeType::wrap($this[$keys]);
+                return AeType::wrapReturn($this[$keys]);
             }
 
             $return = array();
@@ -431,10 +429,10 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
                 $return[] = $this[$offset];
             }
 
-            return AeType::wrap($return);
+            return AeType::wrapReturn($return);
         }
 
-        return AeType::wrap($keys);
+        return AeType::wrapReturn($keys);
     }
 
     /**
@@ -811,13 +809,13 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
      */
     public function getFirst()
     {
-        if ($this->length() == 0) {
-            return AeType::wrap(null);
+        if ($this->length == 0) {
+            return AeType::wrapReturn(null);
         }
 
         $keys = array_keys($this->_value);
 
-        return AeType::wrap($this->_value[$keys[0]]);
+        return AeType::wrapReturn($this->_value[$keys[0]]);
     }
 
     /**
@@ -827,7 +825,7 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
      */
     public function getLast()
     {
-        $length = $this->length();
+        $length = $this->length;
 
         if ($length == 0) {
             return AeType::wrap(null);
@@ -893,20 +891,15 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
     }
 
     /**
-     * Return array element count
-     *
-     * This method is an alias of {@link AeArray::count() count()}
+     * Get array length
      * 
      * This method returns scalar integer instead of {@link AeInteger} instance.
      * This is due to the fact, that the method does not manipulate the array
      * in any way but is informational.
      *
-     * The optional <var>filter</var> parameter can be used to count certain
-     * classes inside the array and should contain a class name
-     *
      * @return int
      */
-    public function length()
+    public function getLength()
     {
         return count($this->_value);
     }
@@ -921,7 +914,7 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
      */
     public function __toString()
     {
-        return $this->getClass() . '(' . $this->length() . ')';
+        return $this->getClass() . '(' . $this->length . ')';
     }
 
     /**
@@ -963,7 +956,7 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
             throw new AeArrayException('Invalid offset value: offset does not exist', 413);
         }
 
-        return AeType::wrap($this->_value[$offset]);
+        return AeType::wrapReturn($this->_value[$offset]);
     }
 
     /**
@@ -1018,6 +1011,8 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
     /**
      * Return array element count
      *
+     * This method is an alias of {@link AeArray::getLength() getLength()}.
+     *
      * This method returns scalar integer instead of {@link AeInteger} instance.
      * This is due to the fact, that the method does not manipulate the array
      * in any way but is informational.
@@ -1028,7 +1023,7 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
      */
     public function count()
     {
-        return $this->length();
+        return $this->length;
     }
 
     /**

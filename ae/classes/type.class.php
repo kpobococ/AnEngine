@@ -57,10 +57,9 @@ abstract class AeType extends AeObject
      * Wrap value in AeType instance
      *
      * This method selects the respective class and wraps the passed value using
-     * that class. If the value passed is not a type value, false is returned.
-     * Type values are null, boolean, integer, float, string and array values.
-     *
-     * @todo resolve the false issue
+     * that class. If the value passed is not a type value, original value is
+     * returned. Type values are null, boolean, integer, float, string and array
+     * values.
      *
      * @param mixed $value
      *
@@ -84,7 +83,7 @@ abstract class AeType extends AeObject
             return new AeArray($value);
         }
 
-        return false;
+        return $value;
     }
 
     /**

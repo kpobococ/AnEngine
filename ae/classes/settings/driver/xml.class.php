@@ -92,11 +92,11 @@ class AeSettings_Driver_Xml extends AeSettings_Driver
         $xml      = AeXml::getContents($data);
         $sections = $xml->getFirst('sections');
 
-        if ($sections && $sections->children->length() > 0)
+        if ($sections && $sections->children->length > 0)
         {
             foreach ($sections->children as $section)
             {
-                if ($section->children->length() > 0)
+                if ($section->children->length > 0)
                 {
                     foreach ($section->children as $setting) {
                         $name = $section->get('name').'.'.$setting->get('name');
