@@ -42,9 +42,6 @@ class AeXml_Node extends AeNode
 
     /**
      * Element children
-     *
-     * This is null for empty elements
-     *
      * @var array
      */
     protected $_children = array();
@@ -73,13 +70,11 @@ class AeXml_Node extends AeNode
     /**
      * Constructor
      *
-     * You can create a text node by passing '@text' as element's name
-     *
      * @param string $name element tag name
      */
     public function __construct($name)
     {
-        $this->name = preg_replace('#\s+#', '', (string) $name);
+        $this->_name = preg_replace('#\s+#', '_', trim((string) $name));
     }
 
     /**
@@ -97,7 +92,7 @@ class AeXml_Node extends AeNode
      *
      * @return bool
      */
-    public function hasProperties()
+    public function hasAttributes()
     {
         return !empty($this->_properties);
     }
@@ -112,11 +107,13 @@ class AeXml_Node extends AeNode
      */
     public function hasChildren($filter = null)
     {
+        $empty = empty($this->_children);
+
         if (is_null($filter)) {
-            return !empty($this->_children);
+            return !$empty;
         }
 
-        if (!$this->hasChildren()) {
+        if ($empty) {
             return false;
         }
 
@@ -124,7 +121,7 @@ class AeXml_Node extends AeNode
 
         foreach ($this->_children as $child)
         {
-            if ($child->name == $filter) {
+            if ($child->_name == $filter) {
                 return true;
             }
         }
@@ -160,11 +157,11 @@ class AeXml_Node extends AeNode
 
         if ($child instanceof AeXml_Node) {
             // *** Find the node
-            return ($child->parent === $this);
+            return ($child->_parent === $this);
         }
 
         // *** Find the offset
-        return (count($this->children) >= $child);
+        return (count($this->_children) >= $child);
     }
 
     /**
@@ -174,13 +171,15 @@ class AeXml_Node extends AeNode
      *
      * @return bool
      */
-    public function has($name)
+    public function hasAttribute($name)
     {
-        if (!$this->hasProperties()) {
+        if (!$this->hasAttributes()) {
             return false;
         }
 
-        if (isset($this->_properties[(string) $name])) {
+        $name = preg_replace('#\s+#', '_', trim((string) $name));
+
+        if (isset($this->_properties[$name])) {
             return true;
         }
 
@@ -195,39 +194,39 @@ class AeXml_Node extends AeNode
      *
      * @param string $filter
      *
-     * @return AeArray|array
+     * @return array
      */
     public function getChildren($filter = null)
     {
         if (!$this->hasChildren()) {
-            return AeType::wrapReturn(array());
+            return array();
         }
 
         if (is_null($filter)) {
-            return AeType::wrapReturn($this->_children);
+            return $this->_children;
         }
 
         $return = array();
         $filter = (string) $filter;
 
-        foreach ($this->children as $node)
+        foreach ($this->_children as $node)
         {
-            if ($node->name == $filter) {
+            if ($node->_name == $filter) {
                 array_push($return, $node);
             }
         }
 
-        return AeType::wrapReturn($return);
+        return $return;
     }
 
     /**
-     * Get element properties
+     * Get element attributes
      *
      * @return AeArray
      */
-    public function getProperties()
+    public function getAttributes()
     {
-        return AeType::wrapReturn($this->_properties);
+        return $this->_properties;
     }
 
     /**
@@ -300,16 +299,16 @@ class AeXml_Node extends AeNode
     public function getNext($filter = null)
     {
         if (is_null($filter)) {
-            return $this->parent->getChild($this->position + 1);
+            return $this->_parent->getChild($this->_position + 1);
         }
 
-        $children = $this->parent->children;
+        $children = $this->_parent->_children;
         $length   = count($children);
         $filter   = (string) $filter;
 
-        for ($i = $this->position + 1; $i < $length; $i++)
+        for ($i = $this->_position + 1; $i < $length; $i++)
         {
-            if ($children[$i]->name == $filter) {
+            if ($children[$i]->_name == $filter) {
                 return $children[$i];
             }
         }
@@ -331,20 +330,20 @@ class AeXml_Node extends AeNode
      */
     public function getPrevious($filter = null)
     {
-        if ($this->position == 0) {
+        if ($this->_position == 0) {
             return null;
         }
 
         if (is_null($filter)) {
-            return $this->parent->getChild($this->position - 1);
+            return $this->_parent->getChild($this->_position - 1);
         }
 
-        $children = $this->parent->children;
+        $children = $this->_parent->_children;
         $filter   = (string) $filter;
 
-        for ($i = 0; $i < $this->position; $i ++)
+        for ($i = 0; $i < $this->_position; $i ++)
         {
-            if ($children[$i]->name == $filter) {
+            if ($children[$i]->_name == $filter) {
                 return $children[$i];
             }
         }
@@ -353,20 +352,18 @@ class AeXml_Node extends AeNode
     }
 
     /**
-     * Get property value
+     * Get attribute value
      *
-     * @param string $name    property name
-     * @param string $default property default value
+     * @param string $name    attribute name
+     * @param string $default attribute default value
      *
-     * @return AeString
+     * @return mixed
      */
-    public function get($name, $default = null)
+    public function getAttribute($name, $default = null)
     {
-        if ($this->propertyExists($name)) {
-            return parent::get($name, $default);
-        }
+        $name = preg_replace('#\s+#', '_', trim((string) $name));
 
-        return AeType::wrapReturn(parent::get($name, $default));
+        return $this->hasAttribute($name) ? $this->_properties[$name] : $default;
     }
 
     /**
@@ -393,53 +390,31 @@ class AeXml_Node extends AeNode
     public function getData($default = null)
     {
         if (!isset($this->_data)) {
-            return AeType::wrapReturn($default);
+            return $default;
         }
 
-        return AeType::wrapReturn($this->_data);
+        return $this->_data;
     }
 
     /**
      * Get element position
      *
-     * Checks current assigned position for validity and returns it. If current
-     * element is not found within the children of assigned parent, tries to
-     * find the correct position manually. If position not found, parent is
-     * unassigned.
+     * Returns current assigned position. If current element is root, null is
+     * returned.
      *
-     * This method can essentially be used as a validator for child-parent
-     * relations between nodes.
+     * <b>NOTE:</b> an element is considered root if it has not been added to
+     * another element as a child.
      *
-     * @return int or false, if position is incorrect
+     * @return int or null, if current element is a root element
      */
     public function getPosition()
     {
         // *** No parent at all
         if (!$this->hasParent()) {
-            $this->_position = null;
-
-            return false;
+            return null;
         }
 
-        if (!is_null($this->_position) && $this->_parent->children[$this->_position] === $this) {
-            // *** Position set and is correct
-            return $this->_position;
-        }
-
-        // *** Position incorrect, let's find it manually
-        foreach ($this->_parent->children as $offset => $child)
-        {
-            if ($child === $this) {
-                $this->_position = $offset;
-                return $offset;
-            }
-        }
-
-        // *** Wrong parent set
-        $this->_parent   = null;
-        $this->_position = null;
-
-        return false;
+        return $this->_position;
     }
 
     /**
@@ -452,7 +427,7 @@ class AeXml_Node extends AeNode
     public function addChild($child)
     {
         // *** This node cannot have child nodes
-        if ($this->name == '@text') {
+        if ($this->_name == '@text') {
             throw new AeXmlNodeException('Cannot add children to text nodes', 406);
         }
 
@@ -554,7 +529,8 @@ class AeXml_Node extends AeNode
      */
     public function set($name, $value)
     {
-        $name = preg_replace('#\s+#', '', (string) $name);
+        $name = trim($name);
+        $name = preg_replace('#\s+#', '_', (string) $name);
 
         parent::set($name, $value);
 
