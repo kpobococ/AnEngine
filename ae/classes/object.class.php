@@ -159,19 +159,15 @@ abstract class AeObject
         // *** Check if explicit setter is present for the property
         if ($this->_methodExists('set' . ucfirst($name))) {
             return $this->call('set' . ucfirst($name), array($value));
-        }
+        } 
 
         // *** Check if property exists
         if ($this->_propertyExists($name)) {
             $this->$name = $value;
-            return $this;
-        }
-
-        // *** Check if _property exists
-        if ($this->_propertyExists('_' . $name)) {
+        } else if ($this->_propertyExists('_' . $name)) {
+            // *** Protected property with leading underscore exists
             $_name        = '_' . $name;
             $this->$_name = $value;
-            //return $this;
         }
 
         return $this;

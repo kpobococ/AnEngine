@@ -89,25 +89,16 @@ class AeSettings_Driver_Xml extends AeSettings_Driver
             return false;
         }
 
-        $xml      = AeXml::getContents($data);
-        $sections = $xml->getFirst('sections');
+        $xml = AeXml::getContents($data);
 
-        if ($sections && $sections->children->length > 0)
+        if ($xml->hasChildren())
         {
-            foreach ($sections->children as $section)
-            {
-                if ($section->children->length > 0)
-                {
-                    foreach ($section->children as $setting) {
-                        $name = $section->get('name').'.'.$setting->get('name');
-
-                        $this->set($name, $this->_stringToValue($setting));
-                    }
-                }
+            foreach ($xml->getChildren() as $section) {
+                $this->_properties[$section->getName()] = $this->_stringToValue($section);
             }
         }
 
-        return true;
+        return $this;
     }
 
     /**
@@ -131,21 +122,13 @@ class AeSettings_Driver_Xml extends AeSettings_Driver
      *
      * The above code will produce something like this in the xml file:
      * <code> <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-     * <settings>
-     *     <sections>
-     *         <section name="section">
-     *             <array name="foo">
-     *                 <scalar name="bar" type="string">baz</scalar>
-     *             </array>
-     *         </section>
-     *     </sections>
+     * <settings path="section.xml" date="Sun, 29 Nov 2009 05:48:11 +0200" generator="AeSettings_Driver_Xml">
+     *     <section>
+     *         <foo>
+     *             <bar type="string">baz</bar>
+     *         </foo>
+     *     </section>
      * </settings></code>
-     *
-     * Each file also contains generator information (inside the meta element),
-     * which includes:
-     * - absolute file path
-     * - generation date
-     * - generator class (in case used driver is a child of this class)
      *
      * @param string $data setting file path
      *
@@ -167,33 +150,24 @@ class AeSettings_Driver_Xml extends AeSettings_Driver
         }
 
         $data = AeFile::absolutePath($data);
-        $xml  = AeXml::node('settings');
-        $meta = $xml->addChild('meta');
+        $xml  = AeXml::element('settings');
 
-        $meta->addChild('data')->setData('File generated automatically');
-        $meta->addChild('path')->setData($data);
-        $meta->addChild('date')->setData(date('r'));
-        $meta->addChild('generator')->setData($this->getClass());
-
-        $sections = $xml->addChild('sections');
+        $xml->setAttributes(array(
+            'path' => $data,
+            'date' => date('r'),
+            'generator' => $this->getClass()
+        ));
 
         if (count($this->_properties) > 0)
         {
-            foreach ($this->_properties as $section => $values)
-            {
-                if (count($values) > 0)
-                {
-                    $sectionNode = $sections->addChild('section');
-                    $sectionNode->properties = array('name' => $section);
-
-                    foreach ($values as $key => $value) {
-                        $this->_valueToString($key, $value, $sectionNode);
-                    }
-                }
+            foreach ($this->_properties as $section => $settings) {
+                $this->_valueToString($section, $settings, $xml);
             }
         }
 
-        return $xml->save($data);
+        $xml->save($data);
+
+        return $this;
     }
 
     /**
@@ -207,44 +181,47 @@ class AeSettings_Driver_Xml extends AeSettings_Driver
      *
      * @return string
      */
-    protected function _valueToString($name, $value, AeXml_Node $node)
+    protected function _valueToString($name, $value, AeInterface_Xml_Element $element)
     {
+        if ($value instanceof AeType) {
+            $value = $value->getValue();
+        }
+
+        if (is_numeric($name)) {
+            $child = $element->addChild('key')->setAttributes(array(
+                'key-name' => $name,
+                'key-type' => AeType::of($name)
+            ));
+        } else {
+            $child = $element->addChild($name);
+        }
+
         if (is_array($value))
         {
-            $setting = $node->addChild('array');
-
-            $setting->properties = array('name' => $name);
-
-            foreach ($value as $key => $val)
-            {
-                $this->_valueToString($key, $val, $setting);
+            foreach ($value as $k => $v) {
+                $this->_valueToString($k, $v, $child);
             }
         } else if (is_object($value)) {
-            $setting = $node->addChild('object');
-
-            $setting->properties = array('name' => $name);
+            $child->setAttribute('type', 'object');
 
             $value = serialize($value);
             $value = str_replace('&', '&amp;', $value);
             $value = str_replace(chr(0), '&null;', $value);
 
-            $setting->setData($value);
+            $child->setData($value);
         } else {
-            $type    = AeType::of($value);
-            $setting = $node->addChild('scalar');
-
-            $setting->properties = array('name' => $name, 'type' => $type);
+            $child->setAttribute('type', AeType::of($value));
 
             if (is_bool($value)) {
                 $value = $value ? 'true' : 'false';
             }
 
             if (!is_null($value)) {
-                $setting->setData($value);
+                $child->setData($value);
             }
         }
 
-        return $setting;
+        return $child;
     }
 
     /**
@@ -257,25 +234,32 @@ class AeSettings_Driver_Xml extends AeSettings_Driver
      *
      * @return mixed
      */
-    protected function _stringToValue(AeXml_Node $setting)
+    protected function _stringToValue(AeInterface_Xml_Element $element)
     {
-        $name = $setting->getName();
+        $type = $element->getAttribute('type', 'array');
 
-        if ($name == 'array')
+        if ($type == 'array')
         {
             $return = array();
 
-            foreach ($setting->getChildren() as $child) {
-                $return[(string) $child->properties['name']] = $this->_stringToValue($child);
+            foreach ($element->getChildren() as $child) {
+                $name = $child->getName();
+
+                if ($name == 'key' && $child->hasAttribute('key-name')) {
+                    $name  = $child->getAttribute('key-name', $name);
+                    $ntype = $child->getAttribute('key-type', 'string');
+                    $name  = $ntype == 'integer' ? (int) $name : $name;
+                }
+
+                $return[$name] = $this->_stringToValue($child);
             }
-        } else if ($name == 'object') {
-            $value  = $setting->getData();
+        } else if ($type == 'object') {
+            $value  = $element->getData();
             $value  = str_replace('&null;', chr(0), $value);
             $value  = str_replace('&amp;', '&', $value);
             $return = unserialize($value);
         } else {
-            $type   = $setting->get('type');
-            $value  = (string) $setting->getData();
+            $value  = (string) $element->getData();
             $return = null;
 
             switch ($type)

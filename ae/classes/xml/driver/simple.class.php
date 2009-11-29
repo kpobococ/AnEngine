@@ -112,13 +112,13 @@ class AeXml_Driver_Simple extends AeXml_Driver
 
         if ($level == 0) {
             // *** Root element
-            $this->_result   = AeXml::node($name);
+            $this->_result   = AeXml::element($name);
             $this->_position = $this->_result;
         } else {
             $this->_position = $this->_position->addChild($name);
         }
 
-        $this->_position->properties = $properties;
+        $this->_position->setAttributes($properties);
 
         return true;
     }
@@ -133,7 +133,11 @@ class AeXml_Driver_Simple extends AeXml_Driver
      */
     public function endElement($parser, $name)
     {
-        $this->_position = $this->_position->parent;
+        if ($this->_position->hasParent()) {
+            $this->_position = $this->_position->getParent();
+        } else {
+            $this->_position = null;
+        }
 
         return true;
     }
@@ -154,7 +158,11 @@ class AeXml_Driver_Simple extends AeXml_Driver
             return false;
         }
 
-        return $this->_position->setData($this->_position->getData('') . $data);
+        if ($this->_position->hasData()) {
+            $data = $this->_position->getData() . $data;
+        }
+
+        return $this->_position->setData($data);
     }
 }
 

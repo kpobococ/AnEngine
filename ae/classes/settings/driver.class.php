@@ -152,6 +152,10 @@ abstract class AeSettings_Driver extends AeNode_Nested implements AeInterface_Se
             $section = $this->section;
         }
 
+        if ($value instanceof AeType) {
+            $value = $value->getValue();
+        }
+
         return parent::set($section.'.'.$name, $value);
     }
 

@@ -87,7 +87,7 @@ abstract class AeXml
     }
 
     /**
-     * Create XML node
+     * Create XML element
      *
      * Creates and returns a root XML Element with the parameters specified. Use
      * this method to start creating your own XML structure to be written to a
@@ -95,11 +95,45 @@ abstract class AeXml
      *
      * @param string $name element name
      *
-     * @return AeXml_Node
+     * @return AeXml_Element
      */
-    public static function node($name)
+    public static function element($name)
     {
-        return new AeXml_Node($name);
+        return new AeXml_Entity_Element($name);
+    }
+
+    /**
+     * Create XML entity data
+     *
+     * Creates and returns an XML data entity (a plain text element). This
+     * entity is used to represent mixed content elements (PCDATA and other
+     * elements):
+     * <code> $xml     = AeXml::element('root');
+     * $mixed   = $xml->addChild('mixed');
+     * $pcdata1 = AeXml::data('Foo bar');
+     * $pcdata2 = clone $pcdata1;
+     *
+     * $mixed->addChild($pcdata1);
+     * $mixed->addChild('baz');
+     * $mixed->addChild($pcdata2);
+     *
+     * echo $xml;</code>
+     *
+     * The code above will produce the following XML:
+     *
+     * <pre> &lt;?xml
+     * &lt;root&gt;
+     *
+     * </pre>
+     *
+     * You can also just use the {@link AeInterface_Xml_Element::addData()}
+     * method to quickly create and add a new XML data entity.
+     *
+     * @param string $data entity data
+     */
+    public static function data($data)
+    {
+        return new AeXml_Entity_Data($data);
     }
 }
 
