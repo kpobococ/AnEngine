@@ -828,12 +828,12 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
         $length = $this->length;
 
         if ($length == 0) {
-            return AeType::wrap(null);
+            return AeType::wrapReturn(null);
         }
 
         $keys = array_keys($this->getValue());
 
-        return AeType::wrap($this->_value[$keys[$length - 1]]);
+        return AeType::wrapReturn($this->_value[$keys[$length - 1]]);
     }
 
     /**
@@ -932,7 +932,7 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
             $offset = $offset->getValue();
         }
 
-        return isset($this->_value[$offset]);
+        return array_key_exists($offset, $this->_value);
     }
 
     /**

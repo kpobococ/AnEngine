@@ -468,8 +468,9 @@ class AeXml_Entity_Element extends AeXml_Entity implements AeInterface_Xml_Eleme
             $this->_data       = null;
         }
 
-        $child->_parent    = $this;
-        $child->_position  = count($this->_children);
+        $child->setParent($this);
+        $child->setPosition(count($this->_children));
+
         $this->_children[] = $child;
 
         return $child;
@@ -500,19 +501,17 @@ class AeXml_Entity_Element extends AeXml_Entity implements AeInterface_Xml_Eleme
             throw new AeXmlEntityElementException('Invalid value passed: entity is not an element child', 412);
         }
 
-        $index  = $child->_position;
+        $index = $child->getPosition();
+        $child->setPosition(null);
 
         // *** Remove child from array and reset child's properties
         unset($this->_children[$index]);
 
-        $this->_children  = array_values($this->_children);
-        $child->_position = null;
-        $child->_parent   = null;
-
-        $length = count($this->_children);
+        $this->_children = array_values($this->_children);
+        $length          = count($this->_children);
 
         for ($i = $index; $i < $length; $i++) {
-            $this->_children[$i]->_position = $i;
+            $this->_children[$i]->setPosition($i);
         }
 
         return $child;

@@ -77,7 +77,7 @@ abstract class AeXml_Entity extends AeObject implements AeInterface_Xml_Entity
         }
 
         // *** Add entity as element's child
-        $element->addChild($this);
+        $this->_parent = $element;
 
         return $this;
     }
@@ -103,49 +103,42 @@ abstract class AeXml_Entity extends AeObject implements AeInterface_Xml_Entity
     /**
      * Set entity position
      *
-     * Relocates current entity to a <var>$position</var> inside the parent
-     * element. Does not replace any entities, but simply reorders them
-     * accordingly.
+     * Sets the entity's position to <var>$position</var>. If null is passed,
+     * entity position is reset and parent is unassigned.
      *
      * @throws AeXmlEntityException #400 on invalid position value
      * @throws AeXmlEntityException #412 if no parent was assigned
      *
-     * @param int $position
+     * @param int|null $position
      *
      * @return AeInterface_Xml_Entity self
      */
     public function setPosition($position)
     {
-        $type = AeType::of($position);
-
-        if ($type != 'integer') {
-            throw new AeXmlEntityException('Invalid value passed: expecting integer, ' . $type . ' given', 400);
-        }
-
-        if ($position instanceof AeInteger) {
+        if ($position instanceof AeType) {
             $position = $position->getValue();
         }
 
-        if ($position < 0) {
-            throw new AeXmlEntityException('Invalid value passed: position cannot be less than zero', 400);
-        }
+        $type = AeType::of($position);
 
-        if (!$this->hasParent()) {
-            throw new AeXmlEntityException('Cannot set position: no parent assigned', 412);
-        }
-
-        if ($position != $this->_position)
+        if ($type != 'null')
         {
-            $parent = $this->_parent;
-            $length = count($parent->getChildren());
-
-            if ($position >= $length) {
-                throw new AeXmlEntityException('Invalid value passed: position must be less than ' . $length, 400);
+            if ($type != 'integer') {
+                throw new AeXmlEntityException('Invalid value passed: expecting integer, ' . $type . ' given', 400);
             }
 
-            $parent->removeChild($this);
-            $parent->setChild($position, $this);
+            if ($position < 0) {
+                throw new AeXmlEntityException('Invalid value passed: position cannot be less than zero', 400);
+            }
+
+            if (!$this->hasParent()) {
+                throw new AeXmlEntityException('Cannot set position: no parent assigned', 412);
+            }
+        } else {
+            $this->_parent   = null;
         }
+
+        $this->_position = $position;
 
         return $this;
     }
@@ -231,6 +224,22 @@ abstract class AeXml_Entity extends AeObject implements AeInterface_Xml_Entity
         $name = preg_replace('#^[^a-zA-Z:_]+#', '', $name);
 
         return $name;
+    }
+
+    public function __clone()
+    {
+        $this->_parent   = null;
+        $this->_position = null;
+
+        if ($this instanceof AeInterface_Xml_Element && $this->hasChildren())
+        {
+            $children        = $this->_children;
+            $this->_children = array();
+
+            foreach ($children as $child) {
+                $this->addChild(clone $child);
+            }
+        }
     }
 }
 

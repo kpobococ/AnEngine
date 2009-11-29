@@ -1,6 +1,6 @@
 <?php
 /**
- * Array Iterator class file
+ * Array iterator class file
  *
  * See {@link AeArray_Iterator} class documentation.
  *
@@ -11,13 +11,11 @@
  */
 
 /**
- * Array Iterator class
+ * Array iterator class
  *
  * This class is an addition to {@link AeArray} class. It implements the SPL
  * Iterator interface, enabling the user to iterate through the AeArray as if it
  * was a regular array.
- *
- * @todo refactor and debug
  *
  * @author Anton Suprun <kpobococ@gmail.com>
  * @version 1.0
@@ -36,13 +34,13 @@ class AeArray_Iterator extends AeObject implements Iterator
      * AeArray object the iterator is attached to
      * @var AeArray
      */
-    protected $_arrayObject;
+    protected $_array;
 
     /**
      * Array keys for internal iteration
      * @var array
      */
-    protected $_array;
+    protected $_keys;
 
     /**
      * Return iterator instance
@@ -51,8 +49,6 @@ class AeArray_Iterator extends AeObject implements Iterator
      * makes sure we won't have several instances of iterators for the same
      * AeArray object. You can still get several instances by cloning the
      * iterator, though.
-     *
-     * @staticvar array $instances AeArray_Iterator instances storage
      *
      * @param AeArray $array
      *
@@ -70,9 +66,31 @@ class AeArray_Iterator extends AeObject implements Iterator
      */
     public function __construct(AeArray $array)
     {
-        $this->_arrayObject = $array;
+        $this->_array = $array;
 
         $this->rewind();
+    }
+
+    /**
+     * Rewind the Iterator
+     *
+     * Rewinds the Iterator to the first element and returns its value
+     *
+     * Method for the {@link Iterator} interface implementation
+     *
+     * @uses AeArray_Iterator::current() to return the value of the element
+     *
+     * @return AeType first element or null, if array is empty
+     */
+    public function rewind()
+    {
+        $this->_keys = $this->_array->getKeys()->getValue();
+
+        reset($this->_keys);
+
+        $this->_readNext();
+
+        return $this->current();
     }
 
     /**
@@ -82,7 +100,7 @@ class AeArray_Iterator extends AeObject implements Iterator
      *
      * Method for the {@link Iterator} interface implementation
      *
-     * @return AeScalar|AeArray|null
+     * @return AeType current element or null, if array is empty
      */
     public function current()
     {
@@ -90,7 +108,7 @@ class AeArray_Iterator extends AeObject implements Iterator
             return null;
         }
 
-        return $this->_arrayObject->offsetGet($this->_key);
+        return $this->_array->offsetGet($this->_key);
     }
 
     /**
@@ -120,35 +138,13 @@ class AeArray_Iterator extends AeObject implements Iterator
      *
      * @uses AeArray_Iterator::current() to return the value of the element
      *
-     * @return AeScalar|AeArray|null
+     * @return AeType next element or null, if end of array was reached
      */
     public function next()
     {
-        next($this->_array);
+        next($this->_keys);
 
-        $this->_moveValueCheck();
-
-        return $this->current();
-    }
-
-    /**
-     * Rewind the Iterator
-     *
-     * Rewinds the Iterator to the first element and returns its value
-     *
-     * Method for the {@link Iterator} interface implementation
-     *
-     * @uses AeArray_Iterator::current() to return the value of the element
-     * 
-     * @return AeScalar|AeArray|null
-     */
-    public function rewind()
-    {
-        $this->_array = $this->arrayObject->getKeys()->getValue();
-
-        reset($this->_array);
-
-        $this->_moveValueCheck();
+        $this->_readNext();
 
         return $this->current();
     }
@@ -170,25 +166,29 @@ class AeArray_Iterator extends AeObject implements Iterator
     }
 
     /**
-     * Check current value
+     * Read next value
      *
      * This method is called after each internal array pointer movement. Methods
      * like {@link AeArray_Iterator::next() next()} and {@link
      * AeArray_Iterator::rewind() rewind()} use it to verify if the current
      * value exists. The {@link AeArray_Iterator::valid() valid()} method only
      * works with the results, this method provides.
+     *
+     * @return mixed current element key or null, if end of array was reached
      */
-    protected function _moveValueCheck()
+    protected function _readNext()
     {
-        $key   = current($this->_array); // FALSE if end of array
-        $valid = key($this->_array) === null ? false : true;
+        $key   = current($this->_keys); // FALSE if end of array
+        $valid = key($this->_keys) === null ? false : true;
 
-        if (!$valid && !$key) {
+        if ($valid === false && $key === false) {
             // *** No element, set all to null
-            $this->_key   = null;
+            $this->_key = null;
         } else {
-            $this->_key   = $key;
+            $this->_key = $key;
         }
+
+        return $key;
     }
 }
 

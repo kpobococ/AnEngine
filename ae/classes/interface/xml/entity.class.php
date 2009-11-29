@@ -69,11 +69,10 @@ interface AeInterface_Xml_Entity
     /**
      * Set entity position
      *
-     * Relocates current entity to a <var>$position</var> inside the parent
-     * element. Does not replace any entities, but simply reorders them
-     * accordingly.
+     * Sets the entity's position to <var>$position</var>. If null is passed,
+     * entity position must be reset and parent must be unassigned.
      *
-     * @param int $position
+     * @param int|null $position
      *
      * @return AeInterface_Xml_Entity self
      */
