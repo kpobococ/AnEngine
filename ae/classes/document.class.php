@@ -873,7 +873,7 @@ class AeDocument extends AeObject
         $return = rtrim($return) . "\n";
 
         if ($wrap) {
-            $hpre   = $indent - 1 > 0 ? str_repeat(' ', $indent - 1) : '';
+            $hpre   = $indent - 1 > 0 ? str_repeat(' ', ($indent - 1) * 4) : '';
             $return = '<head>' . "\n" . $pre . $return . $hpre . '</head>' . "\n";
         }
 

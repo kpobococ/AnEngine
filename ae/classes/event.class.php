@@ -16,9 +16,6 @@
  * This class is a basic event and a global event dispatcher for the whole
  * framework.
  *
- * @todo consider removing static functionality in favor of AeObject event
- *       handling methods
- *
  * @author Anton Suprun <kpobococ@gmail.com>
  * @version 1.0
  * @package AnEngine

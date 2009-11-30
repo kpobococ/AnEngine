@@ -19,7 +19,6 @@
  *
  * See {@link AeInstance::get()} for more details.
  *
- * @todo implement set and remove methods to control object cache
  * @todo consider making AeInstance instance-based, not static
  *
  * @author Anton Suprun <kpobococ@gmail.com>
