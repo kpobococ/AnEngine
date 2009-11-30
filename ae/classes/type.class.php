@@ -89,10 +89,10 @@ abstract class AeType extends AeObject
     /**
      * Get type of value
      *
-     * This method returns data type of the value passed. This method will
-     * return class name for any of the {@link AeType} classes. The purpose of
-     * this method is to correctly detect the type of scalar properties,
-     * specifically float values, as {@link http://php.net/gettype gettype()}
+     * This method returns data type of the value passed. This method will not
+     * distinct between primitive types and {@link AeType} classes. The purpose
+     * of this method is to correctly detect the type of scalar properties,
+     * especially float values, as {@link http://php.net/gettype gettype()}
      * returns double instead of float for these values.
      *
      * If you need to know if a value is an instance of a certain AeType child

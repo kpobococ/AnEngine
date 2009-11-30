@@ -336,7 +336,7 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
      *
      * @see array_pop()
      *
-     * @return AeType|mixed
+     * @return mixed
      */
     public function pop()
     {
@@ -375,7 +375,7 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
      *
      * @see array_shift()
      *
-     * @return AeType|mixed
+     * @return mixed
      */
     public function shift()
     {
@@ -403,7 +403,7 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
      * @param int $count
      * @param int $mode
      *
-     * @return AeType
+     * @return mixed
      */
     public function random($count = 1, $mode = AeArray::RANDOM_VALUES)
     {
@@ -805,7 +805,7 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
     /**
      * Return first value
      *
-     * @return AeType
+     * @return mixed
      */
     public function getFirst()
     {
@@ -821,7 +821,7 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
     /**
      * Return last value
      *
-     * @return AeType
+     * @return mixed
      */
     public function getLast()
     {
@@ -922,7 +922,7 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
      *
      * Method for the {@link ArrayAccess} interface implementation
      *
-     * @param mixed|AeScalar $offset
+     * @param mixed $offset
      *
      * @return bool
      */
@@ -944,7 +944,7 @@ class AeArray extends AeType implements ArrayAccess, Countable, IteratorAggregat
      *
      * @param mixed $offset
      *
-     * @return AeType
+     * @return mixed
      */
     public function offsetGet($offset)
     {

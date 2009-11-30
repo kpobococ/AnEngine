@@ -184,7 +184,7 @@ class AeDate extends AeObject
 
         // *** Illegal value type
         if (!is_array($value) && !is_string($value) && !is_int($value) && !is_float($value)) {
-            throw new AeDateException('Invalid value passed: expecting scalar, ' . AeType::of($value) . ' given', 400);
+            throw new AeDateException('Invalid value passed: expecting array, string, integer or float, ' . AeType::of($value) . ' given', 400);
         }
 
         // *** Convert a numeric string into a number
@@ -718,7 +718,7 @@ class AeDate extends AeObject
      */
     public function __toString()
     {
-        return $this->toString()->__toString();
+        return $this->getValue();
     }
 }
 

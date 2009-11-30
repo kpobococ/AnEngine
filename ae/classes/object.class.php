@@ -465,9 +465,6 @@ abstract class AeObject
      */
     public function __isset($name)
     {
-        // *** Strip leading underscores
-        $name = ltrim($name, '_');
-
         if ($this->propertyExists($name)) {
             return !is_null($this->get($name));
         }

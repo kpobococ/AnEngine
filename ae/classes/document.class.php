@@ -825,10 +825,10 @@ class AeDocument extends AeObject
      * be wrapped by the head tag. This is useful if you want to provide
      * additional head tags inside the template.
      *
-     * <var>$indent</var> parameter specifies a number of spaces to put before
+     * <var>$indent</var> parameter specifies a number of tabs to put before
      * each tag inside the head. If the head tag itself is present, it will be
-     * indented by 4 spaces less than this value (or 0, if this value is less
-     * than 4).
+     * indented by 1 tab less than this value (or 0, if this value is less
+     * than 1).
      *
      * <var>$title</var> parameter is an array of arguments to pass to the
      * {@link AeDocument::getTitle() getTitle()} method. Note, that you can only
@@ -838,13 +838,13 @@ class AeDocument extends AeObject
      * @uses AeDocument::getTitle()
      * @uses AeDocument::getTags()
      *
-     * @param int   $indent section indent number. Default: 4
+     * @param int   $indent section indent number. Default: 1
      * @param array $title  title method parameters. Default: empty
      * @param bool  $wrap   head wrap flag. Default: true
      *
      * @return string
      */
-    public function getHead($indent = 4, $title = null, $wrap = true)
+    public function getHead($indent = 1, $title = null, $wrap = true)
     {
         if ($indent instanceof AeScalar) {
             $indent = $indent->toInteger()->getValue();
@@ -859,7 +859,7 @@ class AeDocument extends AeObject
         }
 
         $title  = array_slice($title, 0, 2);
-        $pre    = $indent > 0 ? str_repeat(' ', $indent) : '';
+        $pre    = $indent > 0 ? str_repeat(' ', $indent * 4) : '';
         $return = '';
 
         $return .= $this->getContentType();
@@ -873,7 +873,7 @@ class AeDocument extends AeObject
         $return = rtrim($return) . "\n";
 
         if ($wrap) {
-            $hpre   = $indent - 4 > 0 ? str_repeat(' ', $indent - 4) : '';
+            $hpre   = $indent - 1 > 0 ? str_repeat(' ', $indent - 1) : '';
             $return = '<head>' . "\n" . $pre . $return . $hpre . '</head>' . "\n";
         }
 

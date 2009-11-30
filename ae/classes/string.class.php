@@ -732,7 +732,7 @@ class AeString extends AeScalar implements ArrayAccess
 
         foreach ($args as $i => $arg)
         {
-            if ($arg instanceof AeScalar) {
+            if ($arg instanceof AeType) {
                 $args[$i] = $arg->getValue();
             }
         }
