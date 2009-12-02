@@ -13,7 +13,8 @@
 /**
  * Input class
  *
- *
+ * @todo write documentation
+ * @todo finish getHTML implementation
  *
  * @author Anton Suprun <kpobococ@gmail.com>
  * @version 1.0

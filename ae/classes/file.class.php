@@ -235,7 +235,10 @@ class AeFile extends AeObject_File
 
     public function clear()
     {
-        // TODO: add file_exists check
+        if (!$this->exists()) {
+            throw new AeFileException('Cannot clear: file does not exist', 404);
+        }
+
         if (@fwrite($this->_open('wb'), '') === false) {
             $e = error_get_last();
             throw new AeFileException('Cannot clear: ' . $e['message'], 500);
