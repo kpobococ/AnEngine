@@ -55,8 +55,8 @@ class AeInput extends AeNode_Nested
      */
     public function __construct($source = null)
     {
-        if (!is_null($source) && !$this->setSource($source)) {
-            throw new AeInputException('Invalid source value: expecting null or integer, ' . AeType::of($source) . ' given', 400);
+        if (!is_null($source)) {
+            $this->setSource($source);
         }
     }
 
@@ -78,7 +78,7 @@ class AeInput extends AeNode_Nested
         }
 
         if (!is_int($source)) {
-            return false;
+            throw new AeInputException('Invalid source value: expecting integer, ' . AeType::of($source) . ' given', 400);
         }
 
         if ($source < self::REQUEST || $source > self::GET) {
@@ -92,7 +92,7 @@ class AeInput extends AeNode_Nested
 
         $this->_source = $source;
 
-        return true;
+        return $this;
     }
 
     /**

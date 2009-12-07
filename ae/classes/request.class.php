@@ -1,19 +1,135 @@
 <?php
 /**
- * @todo write documentation
+ * Request class file
+ *
+ * See {@link AeRequest} class documentation.
+ *
+ * @author Anton Suprun <kpobococ@gmail.com>
+ * @version 1.0
+ * @package AnEngine
+ * @todo add subpackage once custom documentor is done //Framework
+ */
+
+/**
+ * Request class
+ *
+ * This class cleans and parses human-friendly URL input. If you are looking for
+ * input filtering, take a look at {@link AeInput} class.
+ *
+ * Let's assume you have a script available at http://example.com/, that uses
+ * MOD_REWRITE:
+ * <code> $request = new AeRequest(true);
+ *
+ * if (!$request->isClean()) {
+ *     header('Location: ' . $request);
+ * }
+ *
+ * echo $request->site;
+ * echo $request->directory;
+ * echo $request->virtual;
+ * echo $request->file;</code>
+ *
+ * Let's see what the above code will produce for several different ULRs ( =>
+ * means redirect):
+ * <pre> http://example.com/:
+ * http://example.com/
+ * null
+ * null
+ * null
+ *
+ * http://example.com/index.html:
+ * http://example.com/
+ * null
+ * null
+ * index.html
+ *
+ * http://example.com/user/list/:
+ * http://example.com/
+ * null
+ * user/list
+ * null
+ *
+ * http://example.com////user/////list => http://example.com/user/list/
+ * http://example.com/user/list/index.html/ => http://example.com/user/list/index.html</pre>
+ *
+ * You can also provide the array of recognized extensions:
+ * <code> $request = new AeRequest(true, null, array('html', 'xml', 'json'));</code>
+ *
+ * The script above will result in all other extensions to be treated as
+ * directories instead of files, for example:
+ * <pre> http://example.com/user/list/index.php => http://example.com/user/list/index.php/</pre>
+ *
+ * @author Anton Suprun <kpobococ@gmail.com>
+ * @version 1.0
+ * @package AnEngine
+ * @todo add subpackage once custom documentor is done //Framework
  */
 class AeRequest extends AeObject
 {
+    /**
+     * Site protocol, domain and port:
+     * <pre>http://example.com/</pre>
+     * @var string
+     */
     protected $_site = null;
+
+    /**
+     * Actual script subdirectory:
+     * <pre>subdir</pre>
+     * @var string or null, if script is inside the domain's document root
+     */
     protected $_directory = null;
+
+    /**
+     * Virtual path, passed using MOD_REWRITE:
+     * <pre>user/list</pre>
+     * @var string or null, if no path has been passed
+     */
     protected $_virtual = null;
+
+    /**
+     * Script file:
+     * <pre>index.html</pre>
+     * @var string or null, if no file has been specified
+     */
     protected $_file = null;
+
+    /**
+     * Script get:
+     * <pre>foo=foo&bar=bar&baz=baz</pre>
+     * @var string or null, if no get has been specified
+     */
     protected $_get = null;
 
+    /**
+     * Variable that all the virtual data is passed to by MOD_REWRITE
+     * @var string or null, if not set
+     */
     protected $_name = null;
+
+    /**
+     * Is MOD_REWRITE used. If this is false, it is assumed that you are using
+     * the http://example.com/index.php/foo/bar/ URL structure
+     * @var bool
+     */
     protected $_rewrite = false;
+
+    /**
+     * An array of allowed file extensions. If this is empty, every trailing URL
+     * part containing a dot and some text afterwards is treated as a file name
+     * @var array
+     */
     protected $_extensions = array();
 
+    /**
+     * Constructor
+     *
+     * See property documentation for more details on accepted parameters.
+     *
+     * @param bool   $rewrite    is MOD_REWRITE used or not. Default: false
+     * @param string $name       virtual data holding variable. Default: null
+     * @param array  $extensions an array of allowed file extensions
+     */
     public function __construct($rewrite = false, $name = null, $extensions = array())
     {
         $this->setRewrite($rewrite);
@@ -23,6 +139,15 @@ class AeRequest extends AeObject
         $this->_parseRequest();
     }
 
+    /**
+     * Is request URI clean
+     *
+     * This method returns true if the request URI is valid, i.e. does not
+     * contain double slashes, has a trailing slash for all the directory names
+     * and does not have a trailing slash for file names.
+     *
+     * @return bool
+     */
     public function isClean()
     {
         $clean = '/' . preg_replace('#^' . $this->_site . '#', '', $this->toString());
@@ -30,6 +155,13 @@ class AeRequest extends AeObject
         return $clean === $_SERVER['REQUEST_URI'];
     }
 
+    /**
+     * String type cast support method
+     *
+     * This returns a clean version of the request made
+     *
+     * @return string
+     */
     public function toString()
     {
         if (empty($this->_site)) {
@@ -57,6 +189,14 @@ class AeRequest extends AeObject
         return $return;
     }
 
+    /**
+     * Parse request
+     *
+     * Parses request URI and assigns class properties. Also assigns all the GET
+     * parameters to REQUEST according to php.ini settings
+     *
+     * @return AeRequest self
+     */
     protected function _parseRequest()
     {
         // *** Already parsed?
@@ -174,7 +314,46 @@ class AeRequest extends AeObject
             // *** This overwrites the whole GET array, leaving only new params
             parse_str($get, $_GET);
 
-            // TODO: also assign new vars to REQUEST properly
+            $order = @ini_get('variables_order');
+
+            if (version_compare(PHP_VERSION, '5.3.0', '>='))
+            {
+                $_order = @ini_get('request_order');
+
+                if (!empty($_order)) {
+                    $order = $_order;
+                }
+            }
+
+            $order = strtoupper($order);
+
+            if (strpos($order, 'G') !== false)
+            {
+                $length = strlen($order);
+                $req    = array();
+
+                for ($i = 0; $i < $length; $i++)
+                {
+                    $char = $order[$i];
+
+                    switch ($char)
+                    {
+                        case 'G': {
+                            array_merge($req, $_GET);
+                        } break;
+
+                        case 'P': {
+                            array_merge($req, $_POST);
+                        } break;
+
+                        case 'C': {
+                            array_merge($req, $_COOKIE);
+                        }
+                    }
+                }
+
+                $_REQUEST = $req;
+            }
         }
 
         return $this;
