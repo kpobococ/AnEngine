@@ -91,11 +91,11 @@ abstract class AeCore
 
         if (!version_compare(PHP_VERSION, '5.2.0', '>=')) {
             // *** Explicitly include exception file
-            include_once dirname(__FILE__) . SLASH . 'classes' . SLASH . 'exception.class.php';
+            require_once 'ae' . SLASH . 'classes' . SLASH . 'exception.class.php';
             throw new AeException('AnEngine framework requires PHP version 5.2.0 or later', 505);
         }
 
-        include_once 'ae' . SLASH . 'autoload.class.php';
+        require_once 'ae' . SLASH . 'autoload.class.php';
 
         AeAutoload::extensions('.php');
 
@@ -126,7 +126,7 @@ abstract class AeCore
      */
     public static function getClassPath($class, $prefix = 'Ae', $prepend = 'ae_classes_')
     {
-        if (substr($class, 0, strlen($prefix)) == $prefix) {
+        if (strpos($class, $prefix) === 0) {
             // *** Use ae only if Ae prefix is found
             $class = $prepend . substr($class, strlen($prefix));
         }

@@ -87,14 +87,20 @@ abstract class AeDatabase
     /**
      * Get database connection
      *
-     * Get the database connection, using parameters from the ae/database.ini
-     * file to connect.
+     * Get the database connection, using parameters from the settings file to
+     * connect. The optional second argument may be an instance of {@link
+     * AeInterface_File} or a path to configuration file, which will be opened
+     * using {@link AeSettings}. If it is ommited, a database.ini file is
+     * assumed, which should reside in the current working directory (see {@link
+     * http://php.net/getcwd getcwd()} function) or anywhere else inside the
+     * include path (see {@link http://php.net/get_include_path
+     * get_include_path() function}.
      *
      * @throws AeDatabaseException #500 if connection fails due to bad
      *                             configuration
      *
-     * @param string $name     name of the connection
-     * @param string $settings path to custom configuration file
+     * @param string                  $name     name of the connection
+     * @param string|AeInterface_File $settings custom configuration file
      *
      * @return AeInterface_Database instance of a database driver
      */
@@ -102,13 +108,21 @@ abstract class AeDatabase
     {
         $name = $name !== null ? $name : self::DEFAULT_CONNECTION;
 
-        if ($settings === null || !file_exists($settings)) {
-            $file = 'ae'.SLASH.'database.ini';
-        } else {
-            $file = $settings;
-        }
+        if (!($settings instanceof AeInterface_Settings))
+        {
+            if ($settings === null || !file_exists($settings))
+            {
+                $file = getcwd() . SLASH . 'database.ini';
 
-        $settings = AeSettings::getInstance($file);
+                if (!file_exists($file)) {
+                    $file = 'database.ini';
+                }
+            } else {
+                $file = $settings;
+            }
+
+            $settings = AeSettings::getInstance($file);
+        }
 
         $driver   = $settings->get($name.'.driver'  , self::DEFAULT_DRIVER);
         $username = $settings->get($name.'.user'    , 'root');
