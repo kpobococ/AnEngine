@@ -27,7 +27,7 @@ class AeDate_Timezone extends AeObject
 {
     /**
      * Timezone value
-     * @var string
+     * @var DateTimeZone
      */
     protected $_value;
 
@@ -39,10 +39,14 @@ class AeDate_Timezone extends AeObject
      * See the {@link AeDate_Timezone::setValue() setValue()} method
      * documentation for more details on accepted values
      *
-     * @param string $value
+     * @param string|DateTimeZone $value
      */
     public function __construct($value = null)
     {
+        if (is_null($value)) {
+            $value = date('e');
+        }
+
         $this->setValue($value);
     }
 
@@ -54,7 +58,7 @@ class AeDate_Timezone extends AeObject
      * http://php.net/manual/en/timezones.php} (note, some timezones inside the
      * Others are not accepted):
      * <code> $tz   = new AeDate_Timezone('Europe/Amsterdam');
-     * $date = new AeDate('2009-05-12 14:00:00 Europe/Moscow');
+     * $date = new AeDate('2009-05-12 14:00:00', 'Europe/Moscow');
      *
      * echo $date; // Tue, 12 May 2009 14:00:00 +0400
      * echo $date->setTimezone($tz); // Tue, 12 May 2009 12:00:00 +0200</code>
@@ -62,35 +66,36 @@ class AeDate_Timezone extends AeObject
      * @throws AeDateTimezoneException #400 on invalid value
      * @throws AeDateTimezoneException #413 on unrecognized timezone identifier
      *
-     * @param string $value
+     * @param string|DateTimeZone $value
      *
      * @return AeDate_Timezone self
      */
-    public function setValue($value = null)
+    public function setValue($value)
     {
         if ($value instanceof AeString) {
             $value = $value->getValue();
         }
 
-        if (is_null($value)) {
-            $value = date('e');
+        if (!is_string($value) && !($value instanceof DateTimeZone)) {
+            throw new AeDateTimezoneException('Invalid value passed: expecting string or DateTimeZone, ' . AeType::of($value) . ' given', 400);
         }
 
-        if (!is_string($value)) {
-            throw new AeDateTimezoneException('Invalid value passed: expecting string, ' . AeType::of($value) . ' given', 400);
+        if (!($value instanceof DateTimeZone))
+        {
+            if (strpos($value, ' ') !== false) {
+                $value = str_replace(' ', '_', trim($value));
+            }
+
+            $zone = @timezone_open($value);
+
+            if (!$zone) {
+                throw new AeDateTimezoneException('Unrecognized timezone identifier: ' . $value, 413);
+            }
+
+            $value = $zone;
         }
 
-        if (strpos($value, ' ') !== false) {
-            $value = str_replace(' ', '_', trim($value));
-        }
-
-        $zone = @timezone_open($value);
-
-        if (!$zone) {
-            throw new AeDateTimezoneException('Unrecognized timezone identifier: ' . $value, 413);
-        }
-
-        $this->_value = $zone->getName();
+        $this->_value = $value;
 
         return $this;
     }
@@ -108,7 +113,7 @@ class AeDate_Timezone extends AeObject
      */
     public function getValue()
     {
-        return isset($this->_value) ? str_replace('_', ' ', $this->_value) : $default;
+        return str_replace('_', ' ', $this->_value->getName());
     }
 
     /**
@@ -133,7 +138,7 @@ class AeDate_Timezone extends AeObject
      */
     public function __toString()
     {
-        return $this->toString()->getValue();
+        return $this->getValue();
     }
 }
 

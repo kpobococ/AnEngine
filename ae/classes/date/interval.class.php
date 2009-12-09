@@ -40,11 +40,13 @@ class AeDate_Interval extends AeObject
      *
      * @param array|string $value
      */
-    public function __construct($value = 0)
+    public function __construct($value = null)
     {
-        if (!is_null($value)) {
-            $this->setValue($value);
+        if (is_null($value)) {
+            $value = 0;
         }
+
+        $this->setValue($value);
     }
 
     /**

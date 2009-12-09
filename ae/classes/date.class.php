@@ -119,7 +119,7 @@ class AeDate extends AeObject
 
     /**
      * Date value
-     * @var string
+     * @var DateTime
      */
     protected $_value;
 
@@ -128,24 +128,36 @@ class AeDate extends AeObject
      *
      * @see AeDate::setValue()
      *
-     * @param array|string|float|int $value date value
+     * @param array|string|float|int|DateTime     $value    date value
+     * @param string|DateTimeZone|AeDate_Timezone $timezone timezone name
      */
-    public function __construct($value = null)
+    public function __construct($value = null, $timezone = null)
     {
-        $this->setValue($value);
+        if (is_null($value)) {
+            $value = date(self::W3C);
+        }
+
+        $this->setValue($value, $timezone);
     }
 
     /**
      * Set date value
      *
      * The supported values are either a unix timestamp, a string, accepted by
-     * the {@link strtotime() strtotime()} PHP function or an array with the
-     * following keys: year, month, day, hour, minute, second, timezone. If one
-     * of the keys is not set, the current value is used. If none of them are
-     * set (an array is empty), the current date and time is used:
+     * the {@link strtotime() strtotime()} PHP function, a DateTime object or an
+     * array with the following keys: year, month, day, hour, minute, second. If
+     * one of the keys is not set, the current value is used. If none of them
+     * are set (an array is empty), the current date and time is used:
      * <code> // The following three lines create date objects with the same value
-     * $d1 = new AeDate(array('year' => 2000, 'month' => 12, 'day' => 31, 'hour' => 15, 'minute' => 0, 'second' => 0, 'timezone' => 'UTC'));
-     * $d2 = new AeDate('2000-12-31 15:00:00 UTC');
+     * $d1 = new AeDate(array(
+     *     'year' => 2000,
+     *     'month' => 12,
+     *     'day' => 31,
+     *     'hour' => 15,
+     *     'minute' => 0,
+     *     'second' => 0
+     * ), 'UTC');
+     * $d2 = new AeDate('2000-12-31 15:00:00', 'UTC');
      * $d3 = new AeDate(978274800); // Unix timestamp
      *
      * echo $d1 . "\n" . $d2 . "\n" . $d3;</code>
@@ -155,37 +167,27 @@ class AeDate extends AeObject
      * Sun, 31 Dec 2000 15:00:00 +0000
      * Sun, 31 Dec 2000 17:00:00 +0200</pre>
      *
-     * The third date is the same, but the timezone is set to local instead of
-     * UTC. The array form of date may seem cumbersome at first, but consider
-     * the following code:
-     * <code> $d1 = new AeDate(array('timezone' => 'UTC'));
-     * $d2 = new AeDate(date('Y-m-d H:i:s') . ' UTC');
-     *
-     * echo $d1->getValue() === $d2->getValue() ? 'equal' : 'not equal'; // equal</code>
-     *
      * You can also pass null to set the date to current date and time.
      *
      * @throws AeDateException #400 on invalid value
      *
-     * @param array|string|float|int $value
+     * @param array|string|float|int|DateTime     $value
+     * @param string|DateTimeZone|AeDate_Timezone $timezone
      *
      * @return AeDate self
      */
-    public function setValue($value = null)
+    public function setValue($value, $timezone = null)
     {
         if ($value instanceof AeType) {
             $value = $value->getValue();
         }
 
-        // *** No value given, use current time
-        if (is_null($value)) {
-            $value = time();
+        // *** Illegal value type
+        if (!is_array($value) && !is_string($value) && !is_int($value) && !is_float($value) && !($value instanceof DateTime)) {
+            throw new AeDateException('Invalid value passed: expecting array, string, integer, float or DateTime, ' . AeType::of($value) . ' given', 400);
         }
 
-        // *** Illegal value type
-        if (!is_array($value) && !is_string($value) && !is_int($value) && !is_float($value)) {
-            throw new AeDateException('Invalid value passed: expecting array, string, integer or float, ' . AeType::of($value) . ' given', 400);
-        }
+        $timezone = AeDate::timezone($timezone);
 
         // *** Convert a numeric string into a number
         if (is_string($value) && is_numeric($value)) {
@@ -202,7 +204,7 @@ class AeDate extends AeObject
         {
             foreach ($value as $k => $v)
             {
-                if (!in_array((string) $k, array('year', 'month', 'day', 'hour', 'minute', 'second', 'timezone'))) {
+                if (!in_array((string) $k, array('year', 'month', 'day', 'hour', 'minute', 'second'))) {
                     unset($value[$k]);
                 }
             }
@@ -221,19 +223,24 @@ class AeDate extends AeObject
             $_bits[]  = isset($value['minute'])   ? $value['minute']   : date('i');
             $_bits[]  = isset($value['second'])   ? $value['second']   : date('s');
 
-            $_string .= implode(':', $_bits) . ' ';
-            $_string .= isset($value['timezone']) ? str_replace(' ', '_', $value['timezone']) : date('e');
+            $_string .= implode(':', $_bits);
 
             $value    = $_string;
 
             unset($_string, $_bits);
         }
 
-        if (!is_string($value)) {
-            $this->_value = date('Y-m-d H:i:s e', $value);
+        $zone = @timezone_open(str_replace(' ', '_', $timezone->getValue()));
+
+        if ($value instanceof DateTime) {
+            $value->setTimezone($zone);
+        } else if (!is_string($value)) {
+            $value = date_create(date(self::W3C, $value), $zone);
         } else {
-            $this->_value = date_create($value)->format('Y-m-d H:i:s e');
+            $value = date_create($value, $zone);
         }
+
+        $this->_value = $value;
 
         return $this;
     }
@@ -253,7 +260,20 @@ class AeDate extends AeObject
      */
     public function getValue($format = AeDate::RFC2822)
     {
-        return date_create($this->_value)->format($format);
+        if (strpos($format, 'e') !== false)
+        {
+            $zone   = $this->getTimezone();
+            $format = explode('e', $format);
+            $return = array();
+
+            foreach ($format as $bit) {
+                $return[] = $this->_value->format($bit);
+            }
+
+            return implode($zone->getValue(), $return);
+        }
+
+        return $this->_value->format($format);
     }
 
     /**
@@ -313,7 +333,7 @@ class AeDate extends AeObject
                // *** Add days here
                . $p . ' +' . $vals['days'] . ' days';
 
-        return new AeDate($value);
+        return new AeDate($value, $this->getTimezone());
     }
 
     /**
@@ -376,7 +396,7 @@ class AeDate extends AeObject
                // *** Subtract days here
                . $p . ' -' . $vals['days'] . ' days';
 
-        return new AeDate($value);
+        return new AeDate($value, $this->getTimezone());
     }
 
     /**
@@ -392,15 +412,15 @@ class AeDate extends AeObject
      * <var>$operator</var> argument, this method returns TRUE if the
      * relationship is the one specified by the operator, FALSE otherwise.
      *
-     * @param AeDate|array|string|float|integer $value
-     * @param string                            $operator
+     * @param AeDate|DateTime|array|string|float|integer $value
+     * @param string                                     $operator
      *
      * @return int|bool
      */
     public function compare($value = null, $operator = null)
     {
         if (!($value instanceof AeDate)) {
-            $value = new AeDate($value);
+            $value = new AeDate($value, 'UTC');
         }
 
         $zone  = new AeDate_Timezone('UTC');
@@ -430,14 +450,14 @@ class AeDate extends AeObject
      * that an interval is always positive. Use the {@link AeDate::compare()
      * compare()} method to detect the smaller of two date values
      *
-     * @param AeDate|array|string|float|integer $value
+     * @param AeDate|DateTime|array|string|float|integer $value
      *
      * @return AeDate_Interval
      */
     public function difference($value = null)
     {
         if (!($value instanceof AeDate)) {
-            $value = new AeDate($value);
+            $value = new AeDate($value, 'UTC');
         }
 
         switch ($this->compare($value))
@@ -515,33 +535,27 @@ class AeDate extends AeObject
      */
     public function getTimezone()
     {
-        $zone = new AeDate_Timezone;
+        return AeDate::timezone($this->_value->getTimezone());
+        /*
+        $zone   = new AeDate_Timezone;
+        $dst    = (bool) $this->getValue('I');
+        $offset = (int) $this->getValue('Z');
+        $abbrs  = timezone_abbreviations_list();
 
-        try {
-            $zone->setValue($this->getValue('e'));
-        } catch (AeDateTimezoneException $e) {
-            if ($e->getCode() !== 413) {
-                throw $e;
+        foreach ($abbrs as $abbr => $data)
+        {
+            $row = $data[0];
+
+            if ($row['dst'] !== $dst || $row['offset'] !== $offset) {
+                continue;
             }
 
-            $dst    = (bool) $this->getValue('I');
-            $offset = (int) $this->getValue('Z');
-            $abbrs  = timezone_abbreviations_list();
-
-            foreach ($abbrs as $abbr => $data)
-            {
-                $row = $data[0];
-
-                if ($row['dst'] !== $dst || $row['offset'] !== $offset) {
-                    continue;
-                }
-
-                $zone->setValue(strtoupper($abbr));
-                break;
-            }
+            $zone->setValue(strtoupper($abbr));
+            break;
         }
 
-        return $zone;
+        $this->_timezone = $zone;
+        */
     }
 
     /**
@@ -554,14 +568,14 @@ class AeDate extends AeObject
      * See {@link AeDate_Timezone::setValue()} method for a detailed overview of
      * accepted values
      *
-     * @param AeDate_Timezone|string $value
+     * @param AeDate_Timezone|DateTimeZone|string $value
      *
      * @return AeDate
      */
     public function setTimezone($value = null)
     {
         if (!($value instanceof AeDate_Timezone)) {
-            $value = new AeDate_Timezone($value);
+            $value = AeDate::timezone($value);
         }
 
         $zone = $value->getValue();
@@ -571,11 +585,11 @@ class AeDate extends AeObject
         }
 
         $zone = @timezone_open($zone);
-        $date = new DateTime($this->getValue());
+        $date = $this->_value;
 
         $date->setTimezone($zone);
 
-        return new AeDate($date->format(self::W3C));
+        return new AeDate($date, $value);
     }
 
     /**
@@ -587,7 +601,7 @@ class AeDate extends AeObject
      */
     public static function now()
     {
-        return new AeDate(time());
+        return new AeDate;
     }
 
     /**
@@ -603,6 +617,10 @@ class AeDate extends AeObject
      */
     public static function interval($value)
     {
+        if ($value instanceof AeDate_Interval) {
+            return $value;
+        }
+
         return new AeDate_Interval($value);
     }
 
@@ -613,12 +631,16 @@ class AeDate extends AeObject
      * timezone value. See {@link AeDate_Timezone::__construct()} for details on
      * accepted argument values.
      *
-     * @param string $value
+     * @param string|DateTimeZone $value
      *
      * @return AeDate_Timezone
      */
     public static function timezone($value)
     {
+        if ($value instanceof AeDate_Timezone) {
+            return $value;
+        }
+
         return new AeDate_Timezone($value);
     }
 
@@ -677,7 +699,7 @@ class AeDate extends AeObject
      * Returns an array value wrapped in {@link AeArray} class instance. The
      * array contains 7 following keys with their respective values: year, month,
      * day, hour, minute, second, timezone:
-     * <code> $date = new AeDate('2000-05-15 10:20:30 Europe/London');
+     * <code> $date = new AeDate('2000-05-15 10:20:30', 'Europe/London');
      * print_r($date->toArray()->getValue());</code>
      * The above code will result in the following:
      * <pre> Array
@@ -688,7 +710,6 @@ class AeDate extends AeObject
      *     [hour] => 10
      *     [minute] => 20
      *     [second] => 30
-     *     [timezone] => Europe/London
      * )</pre>
      *
      * @return AeArray
@@ -703,8 +724,7 @@ class AeDate extends AeObject
             'day'      => (int) $value[2],
             'hour'     => (int) $value[3],
             'minute'   => (int) $value[4],
-            'second'   => (int) $value[5],
-            'timezone' => (string) $this->getTimezone()->getValue()
+            'second'   => (int) $value[5]
         ));
     }
 
