@@ -233,7 +233,8 @@ class AeDate extends AeObject
         if ($value instanceof DateTime) {
             $value->setTimezone($zone);
         } else if (!is_string($value)) {
-            $value = date_create(date('Y-m-d H:i:s', $value), $zone);
+            $value = date_create(date('Y-m-d H:i:s', $value));
+            $value->setTimezone($zone);
         } else {
             $value = date_create($value);
             $value->setTimezone($zone);
