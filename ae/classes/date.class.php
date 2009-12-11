@@ -188,6 +188,7 @@ class AeDate extends AeObject
         }
 
         $timezone = AeDate::timezone($timezone);
+        $zone     = @timezone_open(str_replace(' ', '_', $timezone->getValue()));
 
         // *** Convert a numeric string into a number
         if (is_string($value) && is_numeric($value)) {
@@ -224,20 +225,18 @@ class AeDate extends AeObject
             $_bits[]  = isset($value['second'])   ? $value['second']   : date('s');
 
             $_string .= implode(':', $_bits);
-
-            $value    = $_string;
+            $value    = new DateTime($_string, $zone);
 
             unset($_string, $_bits);
         }
 
-        $zone = @timezone_open(str_replace(' ', '_', $timezone->getValue()));
-
         if ($value instanceof DateTime) {
             $value->setTimezone($zone);
         } else if (!is_string($value)) {
-            $value = date_create(date(self::W3C, $value), $zone);
+            $value = date_create(date('Y-m-d H:i:s', $value), $zone);
         } else {
-            $value = date_create($value, $zone);
+            $value = date_create($value);
+            $value->setTimezone($zone);
         }
 
         $this->_value = $value;
@@ -535,27 +534,33 @@ class AeDate extends AeObject
      */
     public function getTimezone()
     {
-        return AeDate::timezone($this->_value->getTimezone());
-        /*
-        $zone   = new AeDate_Timezone;
-        $dst    = (bool) $this->getValue('I');
-        $offset = (int) $this->getValue('Z');
-        $abbrs  = timezone_abbreviations_list();
+        $zone = new AeDate_Timezone;
 
-        foreach ($abbrs as $abbr => $data)
-        {
-            $row = $data[0];
-
-            if ($row['dst'] !== $dst || $row['offset'] !== $offset) {
-                continue;
+        try {
+            $zone->setValue($this->_value->format('e'));
+        } catch (AeDateTimezoneException $e) {
+            if ($e->getCode() !== 413) {
+                throw $e;
             }
 
-            $zone->setValue(strtoupper($abbr));
-            break;
+            $dst    = (bool) $this->getValue('I');
+            $offset = (int) $this->getValue('Z');
+            $abbrs  = timezone_abbreviations_list();
+
+            foreach ($abbrs as $abbr => $data)
+            {
+                $row = $data[0];
+
+                if ($row['dst'] !== $dst || $row['offset'] !== $offset) {
+                    continue;
+                }
+
+                $zone->setValue(strtoupper($abbr));
+                break;
+            }
         }
 
-        $this->_timezone = $zone;
-        */
+        return $zone;
     }
 
     /**
