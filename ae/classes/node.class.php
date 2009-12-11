@@ -69,7 +69,7 @@ class AeNode extends AeObject
      * @param string $name  name of the property (public or protected)
      * @param mixed  $value new value of the property
      *
-     * @return bool true if property was found and set, false otherwise
+     * @return AeNode self
      */
     public function set($name, $value)
     {
@@ -81,7 +81,7 @@ class AeNode extends AeObject
 
         $this->_properties[$name] = $value;
 
-        return true;
+        return $this;
     }
 
     /**
@@ -89,7 +89,7 @@ class AeNode extends AeObject
      *
      * @param string $name property name
      *
-     * @return mixed former property value
+     * @return AeNode self
      */
     public function clear($name)
     {
@@ -99,11 +99,9 @@ class AeNode extends AeObject
             return parent::clear($name);
         }
 
-        $value = $this->_properties[$name];
-
         unset($this->_properties[$name]);
 
-        return $value;
+        return $this;
     }
 
     /**
@@ -132,6 +130,8 @@ class AeNode extends AeObject
      * numeric string properties will be skipped.
      *
      * @param array $properties an associative array of properties
+     *
+     * @return AeNode self
      */
     public function bind($properties)
     {
@@ -146,6 +146,8 @@ class AeNode extends AeObject
                 $this->set($property, $value);
             }
         }
+
+        return $this;
     }
 
     /**

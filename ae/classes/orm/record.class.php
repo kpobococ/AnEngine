@@ -45,7 +45,7 @@ abstract class AeOrm_Record extends AeNode
             }
         }
 
-        parent::set($name, $value);
+        return parent::set($name, $value);
     }
 
     protected function _updateField($name, $value)

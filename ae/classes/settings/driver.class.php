@@ -191,7 +191,7 @@ abstract class AeSettings_Driver extends AeNode_Nested implements AeInterface_Se
             $section = $this->section;
         }
 
-        return AeType::wrapReturn(parent::clear($section.'.'.$name));
+        return parent::clear($section.'.'.$name);
     }
 
     public function getSection($name = null)

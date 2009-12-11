@@ -60,7 +60,7 @@ class AeNode_Nested extends AeNode
      * @param string $name  property name
      * @param mixed  $value property value
      *
-     * @return bool true on success, false otherwise
+     * @return AeNode_Nested self
      */
     public function set($name, $value)
     {
@@ -78,7 +78,7 @@ class AeNode_Nested extends AeNode
      *
      * @param string $name property name
      *
-     * @return mixed former property value
+     * @return AeNode_Nested self
      */
     public function clear($name)
     {

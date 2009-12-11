@@ -189,13 +189,13 @@ class AeTemplate extends AeNode
      * @param string|array|AeCallback $callback
      * @param string|array|AeCallback $callback,...
      *
-     * @return bool
+     * @return AeTemplate self
      */
     public function setEscapeCallback($callback)
     {
         $this->_escapeCallback = (array) @func_get_args();
 
-        return true;
+        return $this;
     }
 
     /**
@@ -208,14 +208,14 @@ class AeTemplate extends AeNode
      * @param string|array|AeCallback $callback
      * @param string|array|AeCallback $callback,...
      *
-     * @return bool
+     * @return AeTemplate self
      */
     public function addEscapeCallback($callback)
     {
         $args = (array) @func_get_args();
         $this->_escapeCallback = array_merge($this->_escapeCallback, $args);
 
-        return true;
+        return $this;
     }
 
     /**
@@ -277,6 +277,10 @@ class AeTemplate extends AeNode
      *
      * Processes the template with assigned variables and outputs the rendering
      * result
+     *
+     * @throws AeTemplateException #410 if template file not found
+     *
+     * @return AeTemplate self
      */
     public function display()
     {
@@ -289,7 +293,7 @@ class AeTemplate extends AeNode
 
         include $template;
 
-        return true;
+        return $this;
     }
 
     /**
@@ -365,11 +369,12 @@ class AeTemplate extends AeNode
      * an exception will be thrown
      *
      * @throws AeTemplateException #409 if reserved name is used
+     * @throws AeTemplateException #400 on invalid value passed
      *
-     * @param object|array|AeArray|string|AeString $name  variable name
+     * @param object|array|string $name  variable name
      * @param mixed                                $value variable value
      *
-     * @return bool
+     * @return AeTemplate self
      */
     public function assign($name, $value = null)
     {
@@ -384,7 +389,7 @@ class AeTemplate extends AeNode
                 $this->assign($key, $value);
             }
 
-            return true;
+            return $this;
         }
 
         // *** Assign from array
@@ -394,7 +399,7 @@ class AeTemplate extends AeNode
                 $this->assign($key, $value);
             }
 
-            return true;
+            return $this;
         }
 
         // *** Regular name => value assign
@@ -406,10 +411,10 @@ class AeTemplate extends AeNode
             }
 
             $this->_properties[$name] = $value;
-            return true;
+            return $this;
         }
 
-        return false;
+        throw new AeTemplateException('Invalid value passed: expecting string, array or object, ' . AeType::of($name) . ' given', 400);
     }
 
     /**
@@ -441,17 +446,19 @@ class AeTemplate extends AeNode
      *              {@link AeInteger}, and cast to float, if it is an instance
      *              of {@link AeFloat}.
      *
+     * @throws AeTemplateException #406 if value doesn't pass the check
+     *
      * @uses AeTemplate::CHECK_BOOL
      * @uses AeTemplate::CHECK_NUM
      * @uses AeTemplate::CHECK_TEXT
      * @uses AeTemplate::CHECK_LOOP
      * @uses AeTemplate::CHECK_ANY
      *
-     * @param object|array|AeArray|string|AeString $name  variable name
-     * @param mixed                                $value variable value
-     * @param int                                  $mode  check mode
+     * @param object|array|string $name  variable name
+     * @param mixed               $value variable value
+     * @param int                 $mode  check mode
      *
-     * @return bool true if variable is valid and is assigned, false otherwise
+     * @return AeTemplate self
      */
     public function assignCheck($name, $value = null, $mode = self::CHECK_LOOP)
     {
@@ -465,12 +472,10 @@ class AeTemplate extends AeNode
             $mode = isset($value) ? $value : self::CHECK_LOOP;
 
             foreach (get_object_vars($name) as $key => $value) {
-                if (!$this->assignCheck($key, $value, $mode)) {
-                    return false;
-                }
+                $this->assignCheck($key, $value, $mode);
             }
 
-            return true;
+            return $this;
         }
 
         // *** Assign from array
@@ -479,12 +484,10 @@ class AeTemplate extends AeNode
             $mode = isset($value) ? $value : self::CHECK_LOOP;
 
             foreach ($name as $key => $value) {
-                if (!$this->assignCheck($key, $value, $mode)) {
-                    return false;
-                }
+                $this->assignCheck($key, $value, $mode);
             }
 
-            return true;
+            return $this;
         }
 
         // *** Regular name => value assign
@@ -499,7 +502,7 @@ class AeTemplate extends AeNode
                     }
 
                     if (!is_scalar($value) && !is_boolean((bool) $value)) {
-                        return false;
+                        throw new AeTemplateException('Boolean check failed for "' . $name . '" variable', 406);
                     }
 
                     $value = (bool) $value;
@@ -507,12 +510,12 @@ class AeTemplate extends AeNode
 
                 case AeTemplate::CHECK_NUM:
                 {
-                    if ($value instanceof AeInteger || $value instanceof AeFloat) {
+                    if ($value instanceof AeNumeric) {
                         $value = $value->getValue();
                     }
 
                     if (!is_numeric($value)) {
-                        return false;
+                        throw new AeTemplateException('Numeric check failed for "' . $name . '" variable', 406);
                     }
                 } break;
 
@@ -523,7 +526,7 @@ class AeTemplate extends AeNode
                     }
 
                     if (!is_scalar($value) || !is_string((string) $value)) {
-                        return false;
+                        throw new AeTemplateException('Text check failed for "' . $name . '" variable', 406);
                     }
 
                     $value = (string) $value;
@@ -532,7 +535,7 @@ class AeTemplate extends AeNode
                 case AeTemplate::CHECK_ANY:
                 {
                     if (is_null($value)) {
-                        return false;
+                        throw new AeTemplateException('Not null check failed for "' . $name . '" variable', 406);
                     }
                 } break;
 
@@ -540,7 +543,7 @@ class AeTemplate extends AeNode
                 default:
                 {
                     if (!is_array($value) && !($value instanceof Traversable)) {
-                        return false;
+                        throw new AeTemplateException('Loop check failed for "' . $name . '" variable', 406);
                     }
                 } break;
             }
@@ -548,9 +551,17 @@ class AeTemplate extends AeNode
             return $this->assign($name, $value);
         }
 
-        return false;
+        throw new AeTemplateException('Invalid value passed: expecting string, array or object, ' . AeType::of($name) . ' given', 400);
     }
 
+    /**
+     * @todo finish method documentation
+     *
+     * @param object|array|string $name
+     * @param mixed               $value
+     *
+     * @return AeTemplate self
+     */
     public function assignEscape($name, $value = null)
     {
         if ($name instanceof AeArray || $name instanceof AeString) {
@@ -564,7 +575,7 @@ class AeTemplate extends AeNode
                 $this->assignEscape($key, $value);
             }
 
-            return true;
+            return $this;
         }
 
         // *** Assign from array
@@ -574,7 +585,7 @@ class AeTemplate extends AeNode
                 $this->assignEscape($key, $value);
             }
 
-            return true;
+            return $this;
         }
 
         // *** Regular name => value assign
@@ -590,10 +601,10 @@ class AeTemplate extends AeNode
             }
 
             $this->_properties[$name] = $this->call('escape', $args);
-            return true;
+            return $this;
         }
 
-        return false;
+        throw new AeTemplateException('Invalid value passed: expecting string, array or object, ' . AeType::of($name) . ' given', 400);
     }
 }
 

@@ -18,6 +18,8 @@
  * standard php session functions, just by creating an instance of the class
  * somewhere so that custom storage methods get registered.
  *
+ * @todo add setState() method
+ *
  * @author Anton Suprun <kpobococ@gmail.com>
  * @version 1.0
  * @package AnEngine
@@ -98,8 +100,8 @@ class AeSession extends AeNode_Nested
      * Reads session configuration from the specified configuration file and
      * creates the appropriate session. Created session is started automatically
      *
-     * @param string $name     name of the connection
-     * @param string $settings path to custom configuration file
+     * @param string $name                          name of the connection
+     * @param string $settings|AeInterface_Settings custom configuration file
      *
      * @return AeSession
      */
@@ -107,13 +109,22 @@ class AeSession extends AeNode_Nested
     {
         $name = $name !== null ? $name : self::DEFAULT_CONNECTION;
 
-        if ($settings === null || !file_exists($settings)) {
-            $file = 'ae'.SLASH.'session.ini';
-        } else {
-            $file = $settings;
+        if (!($settings instanceof AeInterface_Settings))
+        {
+            if ($settings === null || !file_exists($settings))
+            {
+                $file = getcwd() . SLASH . 'session.ini';
+
+                if (!file_exists($file)) {
+                    $file = 'session.ini';
+                }
+            } else {
+                $file = $settings;
+            }
+
+            $settings = AeSettings::getInstance($file);
         }
 
-        $settings = AeSettings::getInstance($settings);
         $driver   = $settings->get($name.'.driver' , null);
         $options  = $settings->get($name.'.options', null);
 
@@ -239,17 +250,15 @@ class AeSession extends AeNode_Nested
      *
      * @param string $name
      *
-     * @return bool|mixed
+     * @return AeSession self
      */
     public function clear($name)
     {
-        if (!$this->_check()) {
-            return false;
-        }
+        $this->_check();
 
         $this->_clearByKey((string) $name, $_SESSION);
 
-        return true;
+        return $this;
     }
 
     /**
@@ -267,7 +276,7 @@ class AeSession extends AeNode_Nested
      * @param string $name
      * @param mixed  $value
      *
-     * @return bool
+     * @return AeSession self
      */
     public function set($name, $value)
     {
@@ -277,9 +286,7 @@ class AeSession extends AeNode_Nested
             return parent::set($name, $value);
         }
 
-        if (!$this->_check()) {
-            return false;
-        }
+        $this->_check();
 
         if (!preg_match($this->_keyPattern, $name)) {
             throw new AeSessionException('Key name is invalid', 400);
@@ -314,9 +321,7 @@ class AeSession extends AeNode_Nested
             return parent::get($name, $default);
         }
 
-        if (!$this->_check()) {
-            return false;
-        }
+        $this->_check();
 
         if (!preg_match($this->_keyPattern, (string) $name)) {
             throw new AeSessionException('Key name is invalid', 400);
@@ -580,9 +585,9 @@ class AeSession extends AeNode_Nested
     /**
      * Check session state
      *
-     * Checks the current session state and returns true, if session is active,
-     * false if the state is unknown. Otherwise throws an exception with the
-     * correct message to describe the session state
+     * Checks the current session state and returns true, if session is active.
+     * Otherwise throws an exception with the correct message to describe the
+     * session state.
      *
      * @throws AeSessionException #403 if session validation failed
      * @throws AeSessionException #408 if session has expired
@@ -592,26 +597,26 @@ class AeSession extends AeNode_Nested
      */
     protected function _check()
     {
-        if ($this->_state === self::STATE_ACTIVE) {
-            return true;
-        }
-
-        switch ($this->_state)
+        if (!$this->_state === self::STATE_ACTIVE)
         {
-            case self::STATE_EXPIRED: {
-                throw new AeSessionException('Session has expired', 408);
-            } break;
+            switch ($this->_state)
+            {
+                case self::STATE_EXPIRED: {
+                    throw new AeSessionException('Session has expired', 408);
+                } break;
 
-            case self::STATE_ERROR: {
-                throw new AeSessionException('Session validation failed', 403);
-            } break;
+                case self::STATE_DESTROYED: {
+                    throw new AeSessionException('Session has been destroyed', 412);
+                } break;
 
-            case self::STATE_DESTROYED: {
-                throw new AeSessionException('Session has been destroyed', 412);
-            } break;
+                case self::STATE_ERROR:
+                default: {
+                    throw new AeSessionException('Session validation failed', 403);
+                } break;
+            }
         }
 
-        return false;
+        return true;
     }
 }
 

@@ -99,8 +99,8 @@ abstract class AeDatabase
      * @throws AeDatabaseException #500 if connection fails due to bad
      *                             configuration
      *
-     * @param string                  $name     name of the connection
-     * @param string|AeInterface_File $settings custom configuration file
+     * @param string                      $name     name of the connection
+     * @param string|AeInterface_Settings $settings custom configuration file
      *
      * @return AeInterface_Database instance of a database driver
      */
