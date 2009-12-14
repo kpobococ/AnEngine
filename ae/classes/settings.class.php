@@ -58,7 +58,7 @@ abstract class AeSettings
         } else {
             $driver = $driver !== null ? $driver : self::DEFAULT_DRIVER;
             $args   = func_get_args();
-            $args   = array_splice($args, 1);
+            $args   = array_slice($args, 1);
         }
 
         $class  = 'AeSettings_Driver_' . ucfirst($driver);

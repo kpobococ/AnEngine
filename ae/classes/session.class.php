@@ -203,6 +203,10 @@ class AeSession extends AeNode_Nested
         // *** Disable transparent sid support
         ini_set('session.use_trans_sid', '0');
 
+        if (!isset($options['driver'])) {
+            $options['driver'] = array();
+        }
+
         // *** Create connection
         $this->_connection = AeSession_Driver::getInstance($driver, $options['driver']);
 
@@ -215,25 +219,30 @@ class AeSession extends AeNode_Nested
      * Starts the session, setting the cookie and session state and validating
      * the session parameters, according to the validation options set.
      *
-     * @return bool
+     * @return AeSession self
      */
     public function start()
     {
-        if ($this->_state == self::STATE_ACTIVE) {
-            return true;
+        if ($this->_state !== self::STATE_ACTIVE)
+        {
+            if (!$this->_connection->registered) {
+                /**
+                 * Workaround for PHP bug {@link http://bugs.php.net/bug.php?id=32330 #32330}
+                 */
+                $this->_connection->register();
+            }
+
+            session_cache_limiter('none');
+            session_start();
+
+            $this->_state =	self::STATE_ACTIVE;
+            $this->_start();
+
+            // *** Perform security checks
+            $this->_validate();
         }
 
-        session_cache_limiter('none');
-        session_start();
-
-        // *** Send modified header for IE 6.0 Security Policy
-        header('P3P: CP="NOI ADM DEV PSAi COM NAV OUR OTRo STP IND DEM"');
-
-        $this->_state =	self::STATE_ACTIVE;
-        $this->_start();
-
-        // *** Perform security checks
-        return $this->_validate();
+        return $this;
     }
 
     /**
@@ -254,8 +263,13 @@ class AeSession extends AeNode_Nested
      */
     public function clear($name)
     {
-        $this->_check();
+        $name = (string) $name;
 
+        if ($this->propertyExists($name, 'set')) {
+            return parent::clear($name);
+        }
+
+        $this->_check();
         $this->_clearByKey((string) $name, $_SESSION);
 
         return $this;
@@ -338,13 +352,13 @@ class AeSession extends AeNode_Nested
      * See {@link http://php.net/session_write_close session_write_close()}
      * for more details
      *
-     * @return bool
+     * @return AeSession self
      */
     public function close()
     {
         @session_write_close();
 
-        return true;
+        return $this;
     }
 
     /**
@@ -357,35 +371,35 @@ class AeSession extends AeNode_Nested
      * See {@link http://php.net/session_unset session_unset()} and {@link
      * http://php.net/session_destroy session_destroy()} for more details
      *
-     * @return bool
+     * @return AeSession self
      */
     public function destroy()
     {
-        if ($this->_state === self::STATE_DESTROYED) {
-            return true;
-        }
-
-        if (isset($_COOKIE[$this->getName()]))
+        if ($this->_state !== self::STATE_DESTROYED)
         {
-            $params = session_get_cookie_params();
-            $args   = array($this->getName());
-            $args[] = $params['path'];
-            $args[] = $params['domain'];
-            $args[] = $params['secure'];
+            if (isset($_COOKIE[$this->getName()]))
+            {
+                $params = session_get_cookie_params();
+                $args   = array($this->getName());
+                $args[] = $params['path'];
+                $args[] = $params['domain'];
+                $args[] = $params['secure'];
 
-            if (version_compare(PHP_VERSION, '5.2.0', '>=')) {
-                $args[] = $params['httponly'];
+                if (version_compare(PHP_VERSION, '5.2.0', '>=')) {
+                    $args[] = $params['httponly'];
+                }
+
+                @call_user_func_array(array('AeCookie', 'clear'), $args);
             }
 
-            @call_user_func_array(array('AeCookie', 'clear'), $args);
+            session_unset();
+            session_destroy();
+
+            $this->_connection->registered = false;
+            $this->_state = self::STATE_DESTROYED;
         }
 
-        session_unset();
-        session_destroy();
-
-        $this->_state = self::STATE_DESTROYED;
-
-        return true;
+        return $this;
     }
 
     /**
@@ -436,7 +450,7 @@ class AeSession extends AeNode_Nested
      * - time.last  int session last refresh time (unix timestamp)
      * - time.now   int session current time (unix timestamp)
      *
-     * @return bool
+     * @return AeSession self
      */
     protected function _start()
     {
@@ -452,7 +466,7 @@ class AeSession extends AeNode_Nested
         $this->set('time.last', (int) $this->get('time.now')->value);
         $this->set('time.now' , time());
 
-        return true;
+        return $this;
     }
 
     /**
@@ -467,6 +481,8 @@ class AeSession extends AeNode_Nested
      * any of the validations, the session's {@link AeSession::$_state state}
      * parameter is set to {@link AeSession::STATE_ERROR}. Returns false in both
      * cases
+     *
+     * @todo make session throw exceptions on error and expired
      *
      * @return bool true if validation is passed, false otherwise
      */
@@ -493,7 +509,7 @@ class AeSession extends AeNode_Nested
         // *** Check for client adress
         if ($this->_validate['remote-address'] && isset($_SERVER['REMOTE_ADDR']))
         {
-            $ip = $this->get('client.address');
+            $ip = $this->get('client.address')->getValue();
 
             if ($ip === null) {
                 // *** Session is being created
@@ -507,7 +523,7 @@ class AeSession extends AeNode_Nested
         // *** Check for clients browser
         if ($this->_validate['user-agent'] && isset($_SERVER['HTTP_USER_AGENT']))
         {
-            $browser = $this->get('client.browser');
+            $browser = $this->get('client.browser')->getValue();
 
             if ($browser === null) {
                 // *** Session is being created

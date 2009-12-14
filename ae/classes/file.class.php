@@ -300,6 +300,9 @@ class AeFile extends AeObject_File
         return $opened;
     }
 
+    /**
+     * @return AeFile
+     */
     public static function getInstance($path)
     {
         $path = self::absolutePath($path);

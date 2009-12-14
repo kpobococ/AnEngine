@@ -92,8 +92,13 @@ abstract class AeObject
         $name = ltrim($name, '_');
 
         // *** Check if explicit getter is present for the property
-        if ($this->_methodExists('get' . ucfirst($name))) {
-            return $this->call('get' . ucfirst($name), array($default));
+        if ($this->_methodExists('get' . ucfirst($name)))
+        {
+            if (func_num_args() > 1) {
+                return $this->call('get' . ucfirst($name), array($default));
+            }
+
+            return $this->call('get' . ucfirst($name));
         }
 
         // *** Check if property exists
@@ -433,7 +438,7 @@ abstract class AeObject
      */
     public function __get($name)
     {
-        return $this->get($name, null);
+        return $this->get($name);
     }
 
     /**

@@ -61,7 +61,7 @@ abstract class AeInstance
                 {
                     // *** Check to prevent an infinite loop
                     $trace     = debug_backtrace();
-                    $trace     = array_splice($trace, 1);
+                    $trace     = array_slice($trace, 1);
                     $useGetter = true;
 
                     foreach ($trace as $step)

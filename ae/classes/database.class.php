@@ -65,7 +65,7 @@ abstract class AeDatabase
         $driver = $driver !== null ? $driver : self::DEFAULT_DRIVER;
         $class  = 'AeDatabase_Driver_' . ucfirst($driver);
         $args   = func_get_args();
-        $args   = array_splice($args, 1);
+        $args   = array_slice($args, 1);
 
         try {
             $instance = AeInstance::get($class, $args, true, true);

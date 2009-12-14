@@ -86,7 +86,7 @@ class AeSession_Driver_Database extends AeSession_Driver
      */
     public function __construct(AeArray $options = null)
     {
-        if (isset($options['table']) && file_exists((string) $options['table'])) {
+        if (isset($options['table'])) {
             $this->_storageTable = (string) $options['table'];
         } else {
             $this->_storageTable = '#__session';
@@ -172,11 +172,17 @@ class AeSession_Driver_Database extends AeSession_Driver
      */
     public function clean($lifetime)
     {
-        $expired = date('Y-m-d H:i:s', time() - $lifetime);
         $db      = $this->getConnection();
+        $query   = $db->queryObject();
+        $expired = AeDate::now('UTC')
+                 ->subtract(array('seconds' => $lifetime))
+                 ->getValue('Y-m-d H:i:s');
 
-        $db->setQuery("DELETE FROM `" . $this->_storageTable . "` WHERE `date` < ?");
-        return $db->execute($expired);
+        $query->delete($this->_storageTable)
+              ->where()->bind('date', $expired, '<');
+        $query->execute();
+
+        return true;
     }
 
     /**
@@ -192,10 +198,14 @@ class AeSession_Driver_Database extends AeSession_Driver
      */
     public function destroy($id)
     {
-        $db = $this->getConnection();
+        $db    = $this->getConnection();
+        $query = $db->queryObject();
 
-        $db->setQuery("DELETE FROM `" . $this->_storageTable . "` WHERE `id` = ?", 1);
-        return $db->execute($id);
+        $query->delete($this->_storageTable)
+              ->where()->bind('id', $id);
+        $query->execute(1);
+
+        return true;
     }
 
     /**
@@ -210,12 +220,20 @@ class AeSession_Driver_Database extends AeSession_Driver
      */
     public function read($id)
     {
-        $db = $this->getConnection();
+        $db    = $this->getConnection();
+        $query = $db->queryObject();
 
-        $db->setQuery("SELECT `data` FROM `" . $this->_storageTable . "` WHERE `id` = ?", 1);
-        $db->execute($id);
+        $query->select('data')
+              ->from($this->_storageTable)
+              ->where()->bind('id', $id);
 
-        return (string) $db->getField();
+        $field = $query->execute(1)->getField();
+
+        if (AeType::of($field) == 'null') {
+            return '';
+        }
+
+        return (string) $field;
     }
 
     /**
@@ -232,6 +250,11 @@ class AeSession_Driver_Database extends AeSession_Driver
      *              to write session data, you cannot use a database driver,
      *              which disconnects from the database in the destructor.
      *
+     * <b>NOTE:</b> Because PHP removes all autoload functions from autoload
+     *              stack, this function relies on all the required classes to
+     *              be loaded already.
+     *
+     *
      * @param string $id
      * @param string $data
      *
@@ -239,22 +262,32 @@ class AeSession_Driver_Database extends AeSession_Driver
      */
     public function write($id, $data)
     {
-        $db    = $this->getConnection();
-        $query = $db->queryObject();
+        require_once 'ae' . SLASH . 'classes' . SLASH . 'date.class.php';
+        require_once 'ae' . SLASH . 'classes' . SLASH . 'date' . SLASH . 'timezone.class.php';
 
-        $query->replace($this->_storageTable);
-
-        $data = array(
+        $data = new AeNode(array(
             'id'   => $id,
             'data' => $data,
-            'date' => (string) AeDate::now()->toString('Y-m-d H:i:s')
-        );
+            'date' => AeDate::now('UTC')
+        ));
 
-        $result = $this->fireEvent('write', array($data, $query));
+        if ($this->fireEvent('write', $data))
+        {
+            $db    = $this->getConnection();
+            $query = $db->queryObject();
+            $data  = $data->getProperties();
 
-        if ($result) {
-            $query->values($data);
-            return $query->execute();
+            $data['date'] = $data['date']->getValue('Y-m-d H:i:s');
+
+            // *** Bind all data
+            foreach ($data as $field => $value) {
+                $data[$field] = $query->bind($field, $value);
+            }
+
+            $query->replace($this->_storageTable)
+                  ->values($data)
+                  ->execute();
+            return true;
         }
 
         return false;

@@ -134,7 +134,7 @@ class AeDate extends AeObject
     public function __construct($value = null, $timezone = null)
     {
         if (is_null($value)) {
-            $value = date(self::W3C);
+            $value = time();
         }
 
         $this->setValue($value, $timezone);
@@ -603,11 +603,13 @@ class AeDate extends AeObject
      *
      * Returns current date value wrapped in {@link AeDate} class instance
      *
+     * @param string|DateTimeZone|AeDate_Timezone $timezone timezone name
+     *
      * @return AeDate
      */
-    public static function now()
+    public static function now($timezone = null)
     {
-        return new AeDate;
+        return new AeDate(null, $timezone);
     }
 
     /**

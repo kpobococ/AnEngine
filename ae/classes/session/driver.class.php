@@ -23,6 +23,7 @@
 abstract class AeSession_Driver extends AeObject implements AeInterface_Session
 {
     const DEFAULT_DRIVER = 'file';
+    protected $_registered = false;
 
     /**
      * Get instance
@@ -42,7 +43,7 @@ abstract class AeSession_Driver extends AeObject implements AeInterface_Session
         $driver = $driver !== null ? $driver : self::DEFAULT_DRIVER;
         $class  = 'AeSession_Driver_' . ucfirst($driver);
         $args   = func_get_args();
-        $args   = array_splice($args, 1);
+        $args   = array_slice($args, 1);
 
         try {
             $instance = AeInstance::get($class, $args, true, false);
@@ -87,14 +88,19 @@ abstract class AeSession_Driver extends AeObject implements AeInterface_Session
      */
     public function register()
     {
-        return @session_set_save_handler(
-            array($this, 'open'),
-			array($this, 'close'),
-			array($this, 'read'),
-			array($this, 'write'),
-			array($this, 'destroy'),
-			array($this, 'clean')
-		);
+        if ($this->_registered !== true)
+        {
+            $this->_registered = @session_set_save_handler(
+                array($this, 'open'),
+                array($this, 'close'),
+                array($this, 'read'),
+                array($this, 'write'),
+                array($this, 'destroy'),
+                array($this, 'clean')
+            );
+        }
+
+        return $this->_registered;
     }
 
     /**

@@ -236,7 +236,7 @@ class AeTemplate extends AeNode
     {
         if (func_num_args() > 1) {
             $callbacks = func_get_args();
-            $callbacks = array_splice($callbacks, 1);
+            $callbacks = array_slice($callbacks, 1);
         } else {
             $callbacks = $this->getEscapeCallback();
         }
@@ -593,7 +593,7 @@ class AeTemplate extends AeNode
         {
             // *** Get possible escape callbacks
             $args = @func_get_args();
-            $args = array_splice($args, 1);
+            $args = array_slice($args, 1);
 
             // *** Only assign if no conflict
             if ($this->propertyExists($name)) {
