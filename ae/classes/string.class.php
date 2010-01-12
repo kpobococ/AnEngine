@@ -722,11 +722,13 @@ class AeString extends AeScalar implements ArrayAccess
      *
      * @see sprintf()
      *
+     * @alias AeString::printf()
+     *
      * @param mixed $arg,...
      *
      * @return AeString
      */
-    public function printf()
+    public function format()
     {
         $args = func_get_args();
 
@@ -740,6 +742,12 @@ class AeString extends AeScalar implements ArrayAccess
         array_unshift($args, $this->_value);
 
         return new AeString(call_user_func_array('sprintf', $args));
+    }
+
+    public function printf()
+    {
+        $args = func_get_args();
+        return $this->call('format', $args);
     }
 
     /**

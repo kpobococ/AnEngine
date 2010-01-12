@@ -47,6 +47,66 @@ class AeImage extends AeObject
     protected $_file = null;
 
     /**
+     * Image dimensions
+     * @var array
+     */
+    protected $_size = null;
+
+    /**
+     * Enlarge image on resize
+     * @see AeImage::resize()
+     */
+    const RESIZE_ENLARGE = 1;
+
+    /**
+     * Reduce image on resize
+     * @see AeImage::resize()
+     */
+    const RESIZE_REDUCE  = 2;
+
+    /**
+     * Save aspect ratio on resize
+     * @see AeImage::resize()
+     */
+    const RESIZE_KEEP_RATIO = 4;
+
+    /**
+     * Resize width flag
+     * @see AeImage::resize()
+     */
+    const RESIZE_WIDTH = 8;
+
+    /**
+     * Resize height flag
+     * @see AeImage::resize()
+     */
+    const RESIZE_HEIGHT = 16;
+
+    /**
+     * Default resize value
+     * @see AeImage::resize()
+     */
+    const RESIZE_DEFAULT = 31;
+
+    /**
+     * Fit smaller dimension on resize
+     * @see AeImage::resize()
+     */
+    const RESIZE_FIT_SMALLER = 32;
+
+    /**
+     * Do not resample
+     * @see AeImage::resize(), AeImage::crop()
+     */
+    const NO_RESAMPLE = 64;
+
+    const CROP_LEFT = 1;
+    const CROP_RIGHT = 2;
+    const CROP_TOP = 4;
+    const CROP_BOTTOM = 8;
+    const CROP_CENTER = 15;
+
+    /**
      * Constructor
      *
      * You can create an AeImage object by passing either path to image file or
@@ -78,31 +138,37 @@ class AeImage extends AeObject
             throw new AeImageException('GD library is not available', 503);
         }
 
-        if ($source !== null)
+        if ($source !== null) {
+            $this->load($source);
+        }
+    }
+
+    public function load($source)
+    {
+        if ($source instanceof AeType) {
+            $source = $source->getValue();
+        }
+
+        if (is_array($source))
         {
-            if ($source instanceof AeArray || $source instanceof AeString) {
-                $source = $source->getValue();
-            }
-
-            if (is_array($source))
-            {
-                if (!isset($source['tmp_name']) && !isset($source['name'])) {
-                    throw new AeImageException('Source value invalid', 400);
-                }
-
-                $source = isset($source['tmp_name']) ? $source['tmp_name'] : $source['name'];
-            }
-
-            if (!is_string($source)) {
+            if (!isset($source['tmp_name']) && !isset($source['name'])) {
                 throw new AeImageException('Source value invalid', 400);
             }
 
-            if (!file_exists($source)) {
-                throw new AeImageException('Source file not found', 404);
-            }
-
-            $this->setFile(AeFile::absolutePath($source));
+            $source = isset($source['tmp_name']) ? $source['tmp_name'] : $source['name'];
         }
+
+        if (!is_string($source)) {
+            throw new AeImageException('Source value invalid', 400);
+        }
+
+        if (!file_exists($source)) {
+            throw new AeImageException('Source file not found', 404);
+        }
+
+        $this->setFile(AeFile::absolutePath($source));
+
+        return $this;
     }
 
     /**
@@ -140,35 +206,327 @@ class AeImage extends AeObject
      */
     public function getSize()
     {
-        if (is_resource($this->_image)) {
-            $info = array(@imagesx($this->_image), @imagesy($this->_image));
-        } else {
-            if ($this->file === null) {
-                throw new AeImageException('No image is available', 400);
+        if ($this->_size === null)
+        {
+            if (is_resource($this->_image))
+            {
+                $info = array(@imagesx($this->_image), @imagesy($this->_image));
+
+                if (!is_int($info[0]) || !is_int($info[1])) {
+                    $info = null;
+                }
+            } else {
+                if ($this->file === null) {
+                    throw new AeImageException('No image is available', 400);
+                }
+
+                $info = array_slice(@getimagesize($this->file->path), 0, 2);
             }
 
-            $info = @getimagesize($this->file->path);
+            if (!is_array($info))
+            {
+                // *** Try and load an image using external driver
+                $image = $this->getImage();
+                $info  = array(@imagesx($image), @imagesy($image));
+
+                if (!is_int($info[0]) || !is_int($info[1])) {
+                    $info = null;
+                }
+            }
+
+            if (!is_array($info)) {
+                throw new AeImageException('Could not detect image dimensions', 500);
+            }
+
+            $this->_size = array_combine(array('x', 'y'), $info);
         }
 
-        if (!is_array($info)) {
-            // *** Try and load an image using external driver
-            $info = array(@imagesx($this->getImage()), @imagesy($this->getImage()));
-        }
-
-        if (!is_array($info) || !is_int($info[0]) || !is_int($info[1])) {
-            throw new AeImageException('Could not detect image dimensions', 500);
-        }
-
-        return new AeArray(array(
-            'width'  => $info[0],
-            'height' => $info[1]
-        ));
+        return AeType::wrapReturn($this->_size);
     }
 
     /**
-     * @todo implement method
+     * Resize image
+     *
+     * Resizes the image and returns a modified image object. Does not modify
+     * the original, so you have to save the resized image manually. Requires
+     * width, height or both, depending on the mode.
+     *
+     * Mode is a bitmask of available resize options. The available options are:
+     *  - {@link AeImage::RESIZE_ENLARGE}: enlarge the image to the specified
+     *                    dimensions. Enabled by default.
+     *  - {@link AeImage::RESIZE_REDUCE}:  reduce the image to the specified
+     *                    dimensions. Enabled by default.
+     *  - {@link AeImage::RESIZE_KEEP_RATIO}: if this is enabled, image aspect
+     *                    ratio is kept, adjusting width or height (depends on
+     *                    other options). Enabled by default.
+     *  - {@link AeImage::RESIZE_WIDTH}:  modify image width. Enabled by default.
+     *  - {@link AeImage::RESIZE_HEIGHT}: modify image height. Enabled by default.
+     *  - {@link AeImage::RESIZE_FIT_SMALLER}: if this is enabled, image
+     *                    dimensions are resized so that smaller dimension fits
+     *                    the requested value. This is useful when you want to
+     *                    crop the resulting image to fit the dimensions
+     *                    perfectly.
+     *  - {@link AeImage::NO_RESAMPLE}: if this is enabled, image is not
+     *                    resampled, only resized. This reduces resulting image
+     *                    quality, but also reduces time required to perform the
+     *                    resizing operation.
+     *
+     * <b>NOTE:</b> this method requires at least two flags to be set: one (or
+     * both) of the {@link AeImage::RESIZE_ENLARGE} and {@link
+     * AeImage::RESIZE_REDUCE} flags to define the resizing operation and one
+     * (or both) of the {@link AeImage::RESIZE_WIDTH} and {@link
+     * AeImage::RESIZE_HEIGHT} flags to define the resizing target dimension. If
+     * none of these flags are set, an exception is thrown. The default value
+     * has all four of these set.
+     *
+     * Assuming you want to generate a 200x100 thumbnail of your photo, keeping
+     * the aspect ratio of the original, this is the code required:
+     * <code> $image->resize(200, 100,
+     *     AeImage::RESIZE_REDUCE + AeImage::RESIZE_KEEP_RATION
+     *     + AeImage::RESIZE_WIDTH + AeImage::RESIZE_HEIGHT
+     * );</code>
+     *
+     * This will ensure that images, smaller than 200x100, will not get resized.
+     * But since the default value has all these options set (as the most
+     * common ones), you can just exclude the only option you don't need:
+     * <code> $thumb = $image->resize(200, 100, AeImage::RESIZE_DEFAULT ^ AeImage::RESIZE_ENLARGE);</code>
+     *
+     * If you want to only specify new image height and autodetect the new width
+     * according to the aspect ratio of the original image, use null to skip the
+     * width parameter:
+     * <code> $thumb = $image->resize(null, 100);</code>
+     *
+     * @param int $width
+     * @param int $height
+     * @param int $mode
+     *
+     * @return AeImage resized image
      */
-    public function resize() {}
+    public function resize($width, $height = null, $mode = self::RESIZE_DEFAULT)
+    {
+        if ($width instanceof AeScalar) {
+            $width = $width->getValue();
+        }
+
+        if ($height instanceof AeScalar) {
+            $height = $height->getValue();
+        }
+
+        if ($mode === null) {
+            $mode = AeImage::RESIZE_DEFAULT;
+        }
+
+        // *** Detect flags
+        $f_enlarge = ($mode & self::RESIZE_ENLARGE) === self::RESIZE_ENLARGE;
+        $f_reduce  = ($mode & self::RESIZE_REDUCE)  === self::RESIZE_REDUCE;
+        $f_width   = ($mode & self::RESIZE_WIDTH)   === self::RESIZE_WIDTH;
+        $f_height  = ($mode & self::RESIZE_HEIGHT)  === self::RESIZE_HEIGHT;
+
+        $f_keepRatio  = ($mode & self::RESIZE_KEEP_RATIO)  === self::RESIZE_KEEP_RATIO;
+        $f_fitSmaller = ($mode & self::RESIZE_FIT_SMALLER) === self::RESIZE_FIT_SMALLER;
+        $f_noResample = ($mode & self::NO_RESAMPLE)        === self::NO_RESAMPLE;
+
+        if (!$f_enlarge && !$f_reduce) {
+            throw new AeImageException('At least one of RESIZE_ENLARGE or RESIZE_REDUCE flags must be set', 400);
+        }
+
+        if (!$f_width && !$f_height) {
+            throw new AeImageException('At least one of RESIZE_WIDTH or RESIZE_HEIGHT flags must be set', 400);
+        }
+
+        if ($width === null && $height === null) {
+            throw new AeImageException('At least one dimension is required', 400);
+        }
+
+        $size = $this->getSize();
+
+        if ($size instanceof AeArray) {
+            $size = $size->getValue();
+        }
+
+        $x = $size['x'];
+        $y = $size['y'];
+
+        // *** Save original width, if not conf'd to resize width
+        if ($width === null && !$f_width) {
+            $width = $x;
+        }
+
+        // *** Save original height, if not conf'd to resize height
+        if ($height === null && !$f_height) {
+            $height = $y;
+        }
+
+        // *** Calculate dimensions if keeping original aspect ratio
+        if ($f_keepRatio)
+        {
+            $ratio = $x / $y;
+
+            if ($width && !$height) {
+                $height = $width * $y / $x;
+            } else if ($height && !$width) {
+                $width  = $height * $x / $y;
+            } else {
+                $_ratio = $width / $height;
+
+                if ($ratio != $_ratio)
+                {
+                    // *** Adjust resulting dimensions
+                    if (($ratio < $_ratio && $f_fitSmaller) || ($ratio > $_ratio && !$f_fitSmaller)) {
+                        $height = $width * $y / $x;
+                    } else if (($f_fitSmaller && $ratio > $_ratio) || (!$f_fitSmaller && $ratio < $_ratio)) {
+                        $width  = $height * $x / $y;
+                    }
+                }
+            }
+        }
+
+        // *** Detect if we even require any operations
+        if ($width == $x && $height == $y) {
+            return $this;
+        }
+
+        if (!$f_enlarge)
+        {
+            // *** Ensure no enlargement is performed
+            if ($width > $x) {
+                $width = $x;
+            }
+
+            if ($height > $y) {
+                $height = $y;
+            }
+        }
+
+        if (!$f_reduce)
+        {
+            // *** Ensure no reduction is performed
+            if ($width < $x) {
+                $width = $x;
+            }
+
+            if ($height < $y) {
+                $height = $y;
+            }
+        }
+
+        // *** Resize the image
+        // TODO: add support for image drivers
+        $new      = imagecreatetruecolor($width, $height);
+        $function = 'imagecopy';
+
+        if ($f_noResample) {
+            $function .= 'resized';
+        } else {
+            $function .= 'resampled';
+        }
+
+        if (!function_exists($function)) {
+            throw new AeImageException('Resize mode unavailable on this system', 500);
+        }
+
+        if (!@call_user_func($function, $new, $this->image, 0, 0, 0, 0, $width, $height, $x, $y)) {
+            throw new AeImageException('Image resize failed', 500);
+        }
+
+        $return = new AeImage;
+
+        $return->setImage($new);
+
+        return $return;
+    }
+
+    public function crop($width, $height, $mode = AeImage::CROP_CENTER)
+    {
+        if ($width instanceof AeScalar) {
+            $width = $width->getValue();
+        }
+
+        if ($height instanceof AeScalar) {
+            $height = $height->getValue();
+        }
+
+        if ($mode === null) {
+            $mode = AeImage::RESIZE_DEFAULT;
+        }
+
+        $f_left   = ($mode & self::CROP_LEFT)   === self::CROP_LEFT;
+        $f_right  = ($mode & self::CROP_RIGHT)  === self::CROP_RIGHT;
+        $f_top    = ($mode & self::CROP_TOP)    === self::CROP_TOP;
+        $f_bottom = ($mode & self::CROP_BOTTOM) === self::CROP_BOTTOM;
+
+        $f_noResample = ($mode & self::NO_RESAMPLE) === self::NO_RESAMPLE;
+
+        if (!$f_left && !$f_right) {
+            throw new AeImageException('At least one of CROP_LEFT or CROP_RIGHT flags must be set', 400);
+        }
+
+        if (!$f_top && !$f_bottom) {
+            throw new AeImageException('At least one of CROP_TOP or CROP_BOTTOM flags must be set', 400);
+        }
+
+        $size = $this->getSize();
+
+        if ($size instanceof AeArray) {
+            $size = $size->getValue();
+        }
+
+        $x = $size['x'];
+        $y = $size['y'];
+
+        // *** Detect if we even require any operations
+        if ($width == $x && $height == $y) {
+            return $this;
+        }
+
+        $srcX = 0;
+        $srcY = 0;
+
+        if ($width < $x && $f_right)
+        {
+            $srcX = $x - $width;
+
+            if ($f_left) {
+                // *** Center
+                $srcX = $srcX / 2;
+            }
+        }
+
+        if ($height < $y && $f_bottom)
+        {
+            $srcY = $y - $height;
+
+            if ($f_top) {
+                // *** Center
+                $srcY = $srcY / 2;
+            }
+        }
+
+        // *** Crop the image
+        // TODO: add support for image drivers
+        $new      = imagecreatetruecolor($width, $height);
+        $function = 'imagecopy';
+
+        if ($f_noResample) {
+            $function .= 'resized';
+        } else {
+            $function .= 'resampled';
+        }
+
+        if (!function_exists($function)) {
+            throw new AeImageException('Crop mode unavailable on this system', 500);
+        }
+
+        if (!@call_user_func($function, $new, $this->image, 0, 0, $srcX, $srcY, $width, $height, $width, $height)) {
+            throw new AeImageException('Image crop failed', 500);
+        }
+
+        $return = new AeImage;
+
+        $return->setImage($new);
+
+        return $return;
+    }
 
     /**
      * Save image
@@ -242,7 +600,7 @@ class AeImage extends AeObject
      *
      * @param AeString|string $type
      *
-     * @return bool
+     * @return AeImage self
      */
     public function display($type = null)
     {
@@ -270,15 +628,17 @@ class AeImage extends AeObject
 
         ob_start();
 
-        if ($this->_output($type, $args)) {
+        try {
+            $this->_output($type, $args);
             header('Content-Type: ' . $this->_getMime($type));
             ob_end_flush();
-            return true;
+        } catch (AeImageException $e) {
+            // *** Buffer control
+            ob_end_clean();
+            throw $e;
         }
 
-        ob_end_clean();
-
-        return false;
+        return $this;
     }
 
     /**
@@ -288,15 +648,15 @@ class AeImage extends AeObject
      *
      * @uses AeImage::_getMime()
      *
-     * @return string|bool a valid mime type or false
+     * @return string
      */
     public function getMime()
     {
         if (!is_object($this->file)) {
-            return false;
+            throw new AeImageException('No path value passed', 400);
         }
 
-        return new AeString($this->_getMime($this->file->extension));
+        return AeType::wrapReturn($this->_getMime($this->file->extension));
     }
 
     /**
@@ -409,12 +769,9 @@ class AeImage extends AeObject
         }
 
         array_unshift($args, $this->getImage());
+        @call_user_func_array($function, $args);
 
-        if (!@call_user_func_array($function, $args)) {
-            return false;
-        }
-
-        return true;
+        return $this;
     }
 
     /**
@@ -436,7 +793,7 @@ class AeImage extends AeObject
         }
 
         if (!is_object($this->_file)) {
-            return false;
+            throw new AeImageException('No path value passed', 400);
         }
 
         return new AeImage($this->file->copy($path)->path);
@@ -458,7 +815,7 @@ class AeImage extends AeObject
     public function getFile()
     {
         if ($this->_file === null) {
-            return false;
+            throw new AeImageException('No path value passed', 400);
         }
 
         if (is_string($this->_file)) {

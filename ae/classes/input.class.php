@@ -212,7 +212,7 @@ class AeInput extends AeNode_Nested
                 $lines[$i] = preg_replace('#\s+#', ' ', trim($line));
             }
 
-            $value = implode("\n", $value);
+            $value = implode("\n", $lines);
         } else {
             $value = null;
         }

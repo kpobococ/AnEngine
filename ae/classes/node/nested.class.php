@@ -126,7 +126,7 @@ class AeNode_Nested extends AeNode
      * @param mixed  $value
      * @param array  $source
      *
-     * @return bool
+     * @return AeNode_Nested self
      */
     protected function _setByKey($key, $value, &$source)
     {
@@ -143,7 +143,7 @@ class AeNode_Nested extends AeNode
 
         $source[$key] = $value;
 
-        return true;
+        return $this;
     }
 
     /**
