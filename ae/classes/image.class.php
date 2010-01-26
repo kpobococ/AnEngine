@@ -151,22 +151,26 @@ class AeImage extends AeObject
 
         if (is_array($source))
         {
-            if (!isset($source['tmp_name']) && !isset($source['name'])) {
+            if (!isset($source['tmp_name']) || !isset($source['name'])) {
                 throw new AeImageException('Source value invalid', 400);
             }
 
-            $source = isset($source['tmp_name']) ? $source['tmp_name'] : $source['name'];
-        }
+            if (!file_exists($source['tmp_name'])) {
+                throw new AeImageException('Source file not found', 404);
+            }
 
-        if (!is_string($source)) {
+            $type = strtolower(substr(strrchr($source['name'], '.'), 1));
+
+            $this->setImage($this->_getImage($type, $source['tmp_name']));
+        } else if (is_string($source)) {
+            if (!file_exists($source)) {
+                throw new AeImageException('Source file not found', 404);
+            }
+
+            $this->setFile(AeFile::absolutePath($source));
+        } else {
             throw new AeImageException('Source value invalid', 400);
         }
-
-        if (!file_exists($source)) {
-            throw new AeImageException('Source file not found', 404);
-        }
-
-        $this->setFile(AeFile::absolutePath($source));
 
         return $this;
     }
@@ -559,18 +563,19 @@ class AeImage extends AeObject
             $path = $path->getValue();
         }
 
+        $args = func_get_args();
+
+        // *** Set save path
         if (is_string($path)) {
             $this->setFile(AeFile::getInstance($path));
         } else if (!is_object($this->file)) {
             throw new AeImageException('No path value passed', 400);
         }
 
-        $args = func_get_args();
-
-        // *** Set save path
         $args[0] = $this->file->path;
+        $type    = $this->file->extension;
 
-        if (!$this->_output($this->file->extension, $args)) {
+        if (!$this->_output($type, $args)) {
             throw new AeImageException('Cannot save image: internal error', 500);
         }
 
@@ -769,7 +774,7 @@ class AeImage extends AeObject
         }
 
         array_unshift($args, $this->getImage());
-        @call_user_func_array($function, $args);
+        call_user_func_array($function, $args);
 
         return $this;
     }
@@ -792,7 +797,7 @@ class AeImage extends AeObject
             $path = $path->getValue();
         }
 
-        if (!is_object($this->_file)) {
+        if (!is_object($this->file)) {
             throw new AeImageException('No path value passed', 400);
         }
 
@@ -847,42 +852,42 @@ class AeImage extends AeObject
                 throw new AeImageException('No image is available', 400);
             }
 
-            $type = $this->file->extension;
-
-            switch ($type)
-            {
-                case 'jpg':
-                case 'jpe': {
-                    $type = 'jpeg';
-                } // break intentionally left out
-
-                default:
-                {
-                    $driver = 'AeImage_Driver_' . ucfirst(strtolower($type));
-
-                    if (!class_exists($driver))
-                    {
-                        $function = 'imagecreatefrom' . $type;
-
-                        if (!function_exists($function)) {
-                            throw new AeImageException(ucfirst($driver) . ' driver not found', 404);
-                        }
-                    } else {
-                        $driver = new $driver;
-
-                        if (!($driver instanceof AeInterface_Image)) {
-                            throw new AeImageException(ucfirst($driver) . ' driver has an invalid access interface', 501);
-                        }
-
-                        $function = array($driver, 'getImage');
-                    }
-                } break;
-            }
-
-            $this->_image = call_user_func($function, $this->file->path);
+            $this->_image = $this->_getImage($this->file->extension, $this->file->path);
         }
 
         return $this->_image;
+    }
+
+    protected function _getImage($type, $path)
+    {
+        switch ($type)
+        {
+            case 'jpg':
+            case 'jpe': {
+                $type = 'jpeg';
+            } // break intentionally left out
+        }
+
+        $driver = 'AeImage_Driver_' . ucfirst(strtolower($type));
+
+        if (!class_exists($driver))
+        {
+            $function = 'imagecreatefrom' . $type;
+
+            if (!function_exists($function)) {
+                throw new AeImageException(ucfirst($driver) . ' driver not found', 404);
+            }
+        } else {
+            $driver = new $driver;
+
+            if (!($driver instanceof AeInterface_Image)) {
+                throw new AeImageException(ucfirst($driver) . ' driver has an invalid access interface', 501);
+            }
+
+            $function = array($driver, 'getImage');
+        }
+
+        return @call_user_func($function, $path);
     }
 }
 

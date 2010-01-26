@@ -23,9 +23,9 @@
  * AeInterface_Settings}, an exception will be thrown by {@link AeSettings}. See
  * {@link AeSettings::getInstance()} for more details.
  *
- * @method bool  setSettings() setSettings(array $settings) Set the settings
- *                             array to a specific value
- * @method mixed getSettings() getSettings(mixed $default) Get the whole
+ * @method AeSettings_Driver setProperties() setProperties(array $properties)
+ *                             Set the settings array to a specific value
+ * @method mixed getProperties() getProperties(mixed $default) Get the whole
  *                             settings array
  *
  * @author Anton Suprun <kpobococ@gmail.com>

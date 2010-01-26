@@ -51,6 +51,7 @@ interface AeInterface_File
     public function touch($time = null);
     public function rename($name);
     public function move($path);
+    public function copy($path);
     public function delete();
     public function create($mode = null);
     public function exists();

@@ -62,6 +62,11 @@ class AeDirectory extends AeObject_File implements Countable, IteratorAggregate
         return $this;
     }
 
+    public function copy($path)
+    {
+        throw new AeDirectoryException('Method not implemented', 501);
+    }
+
     public function count()
     {
         return count(scandir($this->path)) - 2;

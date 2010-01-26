@@ -74,6 +74,40 @@ class AeFile extends AeObject_File
         return $this;
     }
 
+    public function copy($path)
+    {
+        if (!$this->exists()) {
+            throw new AeFileException('Cannot copy: file does not exist', 412);
+        }
+
+        if ($path instanceof AeInterface_File) {
+            $path = $path->getPath();
+        }
+
+        if (file_exists($path))
+        {
+            if (!is_dir($path)) {
+                throw new AeFileException('Cannot copy: target already exists', 400);
+            }
+
+            $path = $path . SLASH . $this->name;
+        }
+
+        if ($path == $this->path) {
+            throw new AeFileException('Cannot copy: target path matches original path', 400);
+        }
+
+        if ($this->fireEvent('copy', array($path)))
+        {
+            if (!@copy($this->path, $path)) {
+                $e = error_get_last();
+                throw new AeFileException('Cannot copy: ' . $e['message'], 500);
+            }
+        }
+
+        return AeFile::getInstance($path);
+    }
+
     public function getHandle($mode = 'r')
     {
         if (!$this->exists()) {

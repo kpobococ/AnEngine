@@ -933,7 +933,7 @@ class AeString extends AeScalar implements ArrayAccess
         }
 
         if (!is_int($offset)) {
-            throw new AeStringException('Invalid offset value: expecting int, ' . AeType::of($offset) . ' given', 400);
+            return false;
         }
 
         return $this->length > $offset;

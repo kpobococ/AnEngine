@@ -377,7 +377,7 @@ abstract class AeObject_File extends AeObject implements AeInterface_File
                 throw new AeFileException('Invalid path value: target is not a directory', 400);
             }
 
-            if ($this->fileEvent('move', array($parent, $path))) {
+            if ($this->fireEvent('move', array($parent, $path))) {
                 $this->_renmov($path . SLASH . $this->name);
             }
         }
@@ -475,8 +475,7 @@ abstract class AeObject_File extends AeObject implements AeInterface_File
 
         // *** Fix slashes
         $path   = str_replace(array('/', '\\'), SLASH, $path);
-        $bits   = array_filter(explode(SLASH, $path), 'strlen');
-        $length = count($bits);
+		$bits   = explode(SLASH, $path);
         $return = array();
 
         if ($bits[0] == '.') {
@@ -484,8 +483,12 @@ abstract class AeObject_File extends AeObject implements AeInterface_File
             $return = explode(SLASH, getcwd());
         }
 
-        foreach ($bits as $bit)
+        foreach ($bits as $i => $bit)
         {
+			if ($bit == '' && $i > 0) {
+				continue;
+			}
+
             if ($bit == '.') {
                 continue;
             }
