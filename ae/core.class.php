@@ -127,7 +127,7 @@ abstract class AeCore
     public static function getClassPath($class, $prefix = 'Ae', $prepend = 'ae_classes_')
     {
         if (strpos($class, $prefix) === 0) {
-            // *** Use ae only if Ae prefix is found
+            // *** Prepend only if prefix is present
             $class = $prepend . substr($class, strlen($prefix));
         }
 
