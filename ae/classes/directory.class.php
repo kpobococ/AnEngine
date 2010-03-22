@@ -111,11 +111,19 @@ class AeDirectory extends AeObject_File implements Countable, IteratorAggregate
         return $this;
     }
 
+    /**
+     * @return AeDirectory_Iterator
+     */
     public function getIterator()
     {
         return AeDirectory_Iterator::getInstance($this);
     }
 
+    /**
+     * @param string $path
+     *
+     * @return AeDirectory
+     */
     public static function getInstance($path)
     {
         $path = self::absolutePath($path);

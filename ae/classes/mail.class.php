@@ -83,7 +83,7 @@ class AeMail extends AeObject
 
         // *** Custom headers
         foreach ($this->headers as $header => $content) {
-            $headers[] = ucfirst($header) . ': ' . $content;
+            $headers[] = ucfirst($header) . ': ' . $this->_encodeHeader($content);
         }
 
         $subject = (string) $this->subject;
