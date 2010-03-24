@@ -66,7 +66,7 @@ class AeMail extends AeObject
             foreach ($this->get($field, array()) as $row)
             {
                 if (isset($row['name'])) {
-                    $vals[] = $this->_encodeHeader($row['name']) . ' <' . $row['mail'] . '>';
+                    $vals[] = $row['name'] . ' <' . $row['mail'] . '>';
                 } else {
                     $vals[] = $row['mail'];
                 }
