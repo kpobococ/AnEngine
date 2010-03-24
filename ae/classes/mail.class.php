@@ -11,6 +11,7 @@ class AeMail extends AeObject
     protected $_cc = array();
     protected $_bcc = array();
     protected $_from;
+    protected $_replyTo;
     protected $_subject;
     protected $_body;
     protected $_type = self::PLAIN;
@@ -54,6 +55,16 @@ class AeMail extends AeObject
             }
         }
 
+        // *** Reply-To
+        if (isset($this->_replyTo))
+        {
+            if (isset($this->_replyTo['name'])) {
+                $headers[] = 'Reply-To: ' . $this->_encodeHeader($this->_replyTo['name']) . ' <' . $this->_replyTo['mail'] . '>';
+            } else {
+                $headers[] = 'Reply-To: ' . $this->_replyTo['mail'];
+            }
+        }
+
         // *** To, Cc, Bcc
         foreach (array('to', 'cc', 'bcc') as $field)
         {
@@ -66,7 +77,7 @@ class AeMail extends AeObject
             foreach ($this->get($field, array()) as $row)
             {
                 if (isset($row['name'])) {
-                    $vals[] = $row['name'] . ' <' . $row['mail'] . '>';
+                    $vals[] = $this->_encodeHeader($row['name']) . ' <' . $row['mail'] . '>';
                 } else {
                     $vals[] = $row['mail'];
                 }
@@ -83,7 +94,7 @@ class AeMail extends AeObject
 
         // *** Custom headers
         foreach ($this->headers as $header => $content) {
-            $headers[] = ucfirst($header) . ': ' . $this->_encodeHeader($content);
+            $headers[] = ucfirst($header) . ': ' . $content;
         }
 
         $subject = (string) $this->subject;
@@ -176,6 +187,23 @@ class AeMail extends AeObject
 
         if ($name !== null) {
             $this->_from['name'] = $name;
+        }
+
+        return true;
+    }
+
+    public function setReplyTo($email)
+    {
+        if ($email instanceof AeScalar) {
+            $email = (string) $email;
+        }
+
+        $name = $this->_parseEmail($email);
+
+        $this->_replyTo = array('mail' => $email);
+
+        if ($name !== null) {
+            $this->_replyTo['name'] = $name;
         }
 
         return true;
