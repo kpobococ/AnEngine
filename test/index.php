@@ -5,8 +5,15 @@ include "./ae/core.class.php";
 
 AeCore::load();
 
-$string = new AeString('Привет, хуй моржовый');
+$node = new AeNode;
 
-echo $string->replace(',', '')
-            ->toCamelCase()
-            ->hyphenate('-', 'А-Я');
+$node->set(array(
+    'foo' => 'one',
+    'bar' => 'two',
+    'test',
+    'baz' => 'lightyear'
+));
+
+$string = serialize($node);
+
+echo $string . "\n\n";

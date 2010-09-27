@@ -7,7 +7,6 @@
  * @author Anton Suprun <kpobococ@gmail.com>
  * @version 1.0
  * @package AnEngine
- * @todo add subpackage once custom documentor is done //Framework
  */
 
 /**
@@ -20,7 +19,6 @@
  * @author Anton Suprun <kpobococ@gmail.com>
  * @version 1.0
  * @package AnEngine
- * @todo add subpackage once custom documentor is done //Framework
  */
 abstract class AeCore
 {
@@ -38,7 +36,7 @@ abstract class AeCore
      * loaded by this autoload method.
      *
      * @see AeAutoload
-     * @see AeAutoload::tryFile()
+     * @see AeAutoload::findFile()
      *
      * @param string $class class name
      * 
@@ -147,5 +145,3 @@ abstract class AeCore
         return $class;
     }
 }
-
-?>

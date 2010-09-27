@@ -23,7 +23,7 @@
  * @package AnEngine
  * @todo add subpackage once custom documentor is done //Framework
  */
-class AeNode extends AeObject
+class AeNode extends AeObject implements Serializable
 {
     /**
      * An array of custom node properties
@@ -36,24 +36,29 @@ class AeNode extends AeObject
      *
      * @param array $properties an associative array of properties to bind
      */
-    public function __construct(array $properties = array())
+    public function __construct($properties = null)
     {
         if (!empty($properties)) {
-            $this->bind($properties);
+            $this->set($properties);
         }
     }
 
     /**
      * Node property getter
      *
-     * @param string $name    name of the property (public or protected)
-     * @param mixed  $default value to return if requested property not set
-     *                        or not found
+     * @param string|array $name    name of the property (public or protected)
+     *                              or an array of name default pairs
+     * @param mixed        $default value to return if requested property not
+     *                              set or not found
      * 
      * @return mixed property value, default value if property not set
      */
     public function get($name, $default = null)
     {
+        if (AeType::of($name) == 'array') {
+            return parent::get($name);
+        }
+
         $name = (string) $name;
 
         if ($this->propertyExists($name)) {
@@ -66,13 +71,18 @@ class AeNode extends AeObject
     /**
      * Node property setter
      *
-     * @param string $name  name of the property (public or protected)
-     * @param mixed  $value new value of the property
+     * @param string|array $name  name of the property (public or protected) or
+     *                            an array of key value pairs
+     * @param mixed        $value new value of the property
      *
      * @return AeNode self
      */
-    public function set($name, $value)
+    public function set($name, $value = null)
     {
+        if (AeType::of($name) == 'array') {
+            return parent::set($name);
+        }
+
         $name = (string) $name;
 
         if ($this->propertyExists($name, 'set')) {
@@ -87,12 +97,16 @@ class AeNode extends AeObject
     /**
      * Node property unsetter
      *
-     * @param string $name property name
+     * @param string|array $name property name or an array of property names
      *
      * @return AeNode self
      */
     public function clear($name)
     {
+        if (AeType::of($name) == 'array') {
+            return parent::clear($name);
+        }
+
         $name = (string) $name;
 
         if ($this->propertyExists($name, 'set')) {
@@ -120,7 +134,7 @@ class AeNode extends AeObject
             return parent::__isset($name);
         }
 
-        return isset($this->_properties[$name]);
+        return isset($this->_properties[$name]) && !is_null($this->_properties[$name]);
     }
 
     /**
@@ -132,22 +146,12 @@ class AeNode extends AeObject
      * @param array $properties an associative array of properties
      *
      * @return AeNode self
+     *
+     * @deprecated since version 1.1
      */
     public function bind($properties)
     {
-        if (count($properties) > 0)
-        {
-            foreach ($properties as $property => $value)
-            {
-                if (!is_string($property) || is_numeric($property)) {
-                    continue;
-                }
-
-                $this->set($property, $value);
-            }
-        }
-
-        return $this;
+        return $this->set($properties);
     }
 
     /**
@@ -169,12 +173,22 @@ class AeNode extends AeObject
      */
     public static function __set_state($array)
     {
-        if (count($array) > 0) {
+        if (AeType::of($array) == 'array') {
             $node = new AeNode;
-            $node->bind($array);
+            $node->set($array);
         }
 
         return $node;
+    }
+
+    public function serialize()
+    {
+        return serialize($this->_properties);
+    }
+
+    public function unserialize($properties)
+    {
+        return $this->set(unserialize($properties));
     }
 }
 
@@ -200,4 +214,3 @@ class AeNodeException extends AeObjectException
         parent::__construct($message, $code);
     }
 }
-?>

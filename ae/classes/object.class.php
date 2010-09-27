@@ -45,6 +45,87 @@ abstract class AeObject
     private $___events;
 
     /**
+     * Generic property setter
+     *
+     * This method tries to set the value of a requested property. A property
+     * setter method is called if found, otherwise property value is
+     * assigned directly. Lets say we want to set a value for a property named
+     * "foo", here's what this method does:
+     *
+     * - call setFoo() method if it exists;
+     * - set the value of the $foo property if it exists;
+     * - set the value of the $_foo property if it exists;
+     * - return false;
+     *
+     * Note, that direct calls to protected properties are handled via this
+     * method (unless property setter is found), but direct calls to public
+     * properties are not:
+     *
+     * <code>class T1 extends AeObject
+     * {
+     *      public $foo;
+     *      public $_bar;
+     *
+     *      protected $_baz;
+     * }
+     *
+     * $t = new T1;
+     *
+     * $t->foo  = 'foo'; // foo property value set directly
+     * $t->bar  = 'bar'; // bar property value set via set('bar', 'bar')
+     * $t->_bar = 'bar'; // bar property value set directly
+     *
+     * $t->baz  = 'baz'; // baz property value set via set('baz', 'baz')
+     * $t->_baz = 'baz'; // same as $t->baz = 'baz'</code>
+     *
+     * @throws AeObjectException #404 if property does not exist
+     *
+     * @param string|array $name  name of the property (public or protected) or
+     *                            an associative array of name value pairs
+     * @param mixed        $value new value of the property
+     *
+     * @return AeObject self
+     */
+    public function set($name, $value = null)
+    {
+        // *** Support associative array set method
+        if (AeType::of($name) == 'array')
+        {
+            foreach ($name as $k => $v)
+            {
+                if (!is_string($k) || is_numeric($k)) {
+                    continue;
+                }
+
+                $this->set($k, $v);
+            }
+
+            return $this;
+        }
+
+        // *** Strip leading underscores
+        $_name = ltrim($name, '_');
+
+        // *** Check if explicit setter is present for the property
+        if ($this->_methodExists('set' . ucfirst($_name))) {
+            return $this->call('set' . ucfirst($_name), array($value));
+        }
+
+        // *** Check if property exists
+        if ($this->_propertyExists($_name)) {
+            $this->$_name = $value;
+        } else if ($this->_propertyExists('_' . $_name)) {
+            // *** Protected property with leading underscore exists
+            $_name        = '_' . $_name;
+            $this->$_name = $value;
+        } else {
+            throw new AeObjectException('Property does not exist: ' . $_name, 404);
+        }
+
+        return $this;
+    }
+
+    /**
      * Generic property getter
      *
      * This method tries to get the value of a requested property. A property
@@ -79,15 +160,32 @@ abstract class AeObject
      * echo $t->baz;  // baz property value get via get('baz')
      * echo $t->_baz; // same as $t->baz</code>
      *
-     * @param string $name    name of the property (public or protected)
-     * @param mixed  $default value to return if requested property not set
-     *                        or not found
+     * @param string|array $name    name of the property (public or protected) or
+     *                              an associative array of name default pairs
+     * @param mixed        $default value to return if requested property not set
+     *                              or not found
      * 
-     * @return mixed property value, default value if property not set or not
-     *               found
+     * @return mixed property value or default value, or an associative array of
+     *               name value pairs
      */
     public function get($name, $default = null)
     {
+        if (AeType::of($name) == 'array')
+        {
+            $return = array();
+
+            foreach ($name as $k => $d)
+            {
+                if (!is_string($k) || is_numeric($k)) {
+                    continue;
+                }
+
+                $return[$k] = $this->get($k, $d);
+            }
+
+            return $return;
+        }
+
         // *** Strip leading underscores
         $name = ltrim($name, '_');
 
@@ -116,91 +214,30 @@ abstract class AeObject
     }
 
     /**
-     * Generic property setter
-     *
-     * This method tries to set the value of a requested property. A property
-     * setter method is called if found, otherwise property value is
-     * assigned directly. Lets say we want to set a value for a property named
-     * "foo", here's what this method does:
-     *
-     * - call setFoo() method if it exists;
-     * - set the value of the $foo property if it exists;
-     * - set the value of the $_foo property if it exists;
-     * - return false;
-     *
-     * Note, that direct calls to protected properties are handled via this
-     * method (unless property setter is found), but direct calls to public
-     * properties are not:
-     *
-     * <code>class T1 extends AeObject
-     * {
-     *      public $foo;
-     *      public $_bar;
-     *
-     *      protected $_baz;
-     * }
-     *
-     * $t = new T1;
-     *
-     * $t->foo  = 'foo'; // foo property value set directly
-     * $t->bar  = 'bar'; // bar property value set via set('bar', 'bar')
-     * $t->_bar = 'bar'; // bar property value set directly
-     *
-     * $t->baz  = 'baz'; // baz property value set via set('baz', 'baz')
-     * $t->_baz = 'baz'; // same as $t->baz = 'baz'</code>
-     *
-     * @todo consider adding exception, if property does not exist
-     *
-     * @param string $name  name of the property (public or protected)
-     * @param mixed  $value new value of the property
-     *
-     * @return AeObject self
-     */
-    public function set($name, $value)
-    {
-        // *** Strip leading underscores
-        $name = ltrim($name, '_');
-
-        // *** Check if explicit setter is present for the property
-        if ($this->_methodExists('set' . ucfirst($name))) {
-            return $this->call('set' . ucfirst($name), array($value));
-        } 
-
-        // *** Check if property exists
-        if ($this->_propertyExists($name)) {
-            $this->$name = $value;
-        } else if ($this->_propertyExists('_' . $name)) {
-            // *** Protected property with leading underscore exists
-            $_name        = '_' . $name;
-            $this->$_name = $value;
-        }
-
-        return $this;
-    }
-
-    /**
      * Generic property unsetter
      *
-     * This method tries to unset the value of a requested property. Uses {@link
-     * AeObject::set()} to do the job, but returns the previous property value:
-     * <code>class T1 extends AeObject
-     * {
-     *      protected $_foo;
-     * }
+     * This method tries to unset the value of a requested property.
      *
-     * $t = new T1;
-     *
-     * $t->foo = 'bar';
-     *
-     * echo $t->clear($foo); // 'bar'</code>
-     *
-     * @param string $name  name of the property (public or protected)
+     * @param string $name name of the property (public or protected) or an
+     *                     array of property names
      *
      * @return AeObject self
      */
     public function clear($name)
     {
-        $value = null;
+        if (AeType::of($name) == 'array')
+        {
+            foreach ($name as $k)
+            {
+                if (!is_string($k) || is_numeric($k)) {
+                    continue;
+                }
+
+                $this->clear($k);
+            }
+
+            return $this;
+        }
 
         if ($this->propertyExists($name, 'set')) {
             $this->set($name, null);
@@ -470,13 +507,7 @@ abstract class AeObject
      */
     public function __isset($name)
     {
-        if ($this->propertyExists($name)) {
-            return !is_null($this->get($name));
-        }
-
-        $name = '_' . $name;
-
-        return property_exists($this, $name) && !is_null($this->$name);
+        return $this->propertyExists($name) && !is_null($this->get($name));
     }
 
     /**
@@ -627,7 +658,7 @@ abstract class AeObject
      */
     public function addEvents($events)
     {
-        $type = AeType::of($name);
+        $type = AeType::of($events);
 
         if ($type != 'array') {
             throw new AeObjectException('Invalid events type: expecting array, ' . $type . ' given', 400);
@@ -664,7 +695,7 @@ abstract class AeObject
      */
     public function removeEvents($events)
     {
-        $type = AeType::of($name);
+        $type = AeType::of($events);
 
         if ($type != 'array' && $type != 'string') {
             throw new AeObjectException('Invalid events type: expecting array or string, ' . $type . ' given', 400);
@@ -822,5 +853,3 @@ class AeObjectException extends AeException
         parent::__construct($message, $code);
     }
 }
-
-?>

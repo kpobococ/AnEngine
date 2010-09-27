@@ -330,7 +330,8 @@ abstract class AeAutoload
      * defined method. An example of such file would be the following code:
      *
      * <code><?php
-     * if (!function_exists('mydb_autoload')) {
+     * if (!function_exists('mydb_autoload'))
+     * {
      *     function mydb_autoload($class)
      *     {
      *         if (class_exists($class, false) || interface_exists($class, false)) {
@@ -345,7 +346,8 @@ abstract class AeAutoload
      *         $file = 'ae' . SLASH . 'classes' . SLASH . $file;
      *
      *         // *** To provide support for AeAutoload::extensions() method
-     *         foreach (AeAutoload::extensions() as $ext) {
+     *         foreach (AeAutoload::extensions() as $ext)
+     *         {
      *             if (file_exists($file.$ext)) {
      *                 include_once $file.$ext;
      *                 return true;
@@ -357,7 +359,7 @@ abstract class AeAutoload
      * }
      *
      * AeAutoload::register('mydb_autoload');
-     * ?></code>
+     * </code>
      *
      * @param string $path path to scan
      */
@@ -385,5 +387,3 @@ abstract class AeAutoload
         }
     }
 }
-
-?>
