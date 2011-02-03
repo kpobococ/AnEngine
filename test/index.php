@@ -1,19 +1,22 @@
 <?php
 
-chdir(realpath(dirname(__FILE__) . '/..'));
-include "./ae/core.class.php";
+chdir(dirname(__FILE__) . '/..');
+
+include_once 'ae/core.php';
 
 AeCore::load();
 
-$node = new AeNode;
+$fh = @fopen('./req.log', 'a');
 
-$node->set(array(
-    'foo' => 'one',
-    'bar' => 'two',
-    'test',
-    'baz' => 'lightyear'
-));
+@parse_str(@file_get_contents('php://input'), $input);
 
-$string = serialize($node);
+@fwrite($fh, print_r(array(
+    'method' => $_SERVER['REQUEST_METHOD'],
+    'get' => $_GET,
+    'post' => $_POST,
+    'input' => $input,
+    'server' => $_SERVER
+), true) . "\n" . '------------------------' . "\n");
+@fclose($fh);
 
-echo $string . "\n\n";
+echo 'OK';
